@@ -3,36 +3,14 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostCard from '../../components/PostCard.astro';
 
-// Tag aliases: English slug -> [accepted tags]
-const tagAliases: Record<string, { title: string; aliases: string[] }> = {
-  'life': { title: '生活', aliases: ['life', '生活'] },
-  'making': { title: '製作', aliases: ['making', '製作'] },
-  'obj': { title: '物件', aliases: ['obj', '物件'] },
-};
-
 export async function getStaticPaths() {
   const posts = await getCollection('blog', ({ data }) => !data.draft);
 
   // Get all unique tags from posts
-  const postTags = [...new Set(posts.flatMap((post) => post.data.tags))];
+  const allTags = [...new Set(posts.flatMap((post) => post.data.tags))];
 
-  // Build paths for aliased tags
-  const aliasedPaths = Object.entries(tagAliases).map(([slug, { title, aliases }]) => ({
-    params: { tag: slug },
-    props: {
-      tag: slug,
-      displayTitle: title,
-      posts: posts
-        .filter((post) => post.data.tags.some((t) => aliases.includes(t)))
-        .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()),
-    },
-  }));
-
-  // Build paths for other tags (not covered by aliases)
-  const aliasedTagNames = Object.values(tagAliases).flatMap((v) => v.aliases);
-  const otherTags = postTags.filter((t) => !aliasedTagNames.includes(t));
-
-  const otherPaths = otherTags.map((tag) => ({
+  // Build paths for each tag
+  return allTags.map((tag) => ({
     params: { tag },
     props: {
       tag,
@@ -42,8 +20,6 @@ export async function getStaticPaths() {
         .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()),
     },
   }));
-
-  return [...aliasedPaths, ...otherPaths];
 }
 
 interface Props {
