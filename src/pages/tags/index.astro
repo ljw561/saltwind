@@ -1,0 +1,55 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const posts = await getCollection('blog', ({ data }) => !data.draft);
+
+// Get all unique tags with their counts
+const tagCounts = posts.reduce((acc, post) => {
+  post.data.tags.forEach((tag) => {
+    acc[tag] = (acc[tag] || 0) + 1;
+  });
+  return acc;
+}, {} as Record<string, number>);
+
+// Sort tags alphabetically
+const sortedTags = Object.entries(tagCounts).sort((a, b) =>
+  a[0].localeCompare(b[0])
+);
+---
+
+<BaseLayout
+  title="Tags - Saltwind"
+  description="Browse all tags on Saltwind"
+>
+  <div class="max-w-4xl mx-auto px-4 py-12">
+    <header class="mb-12">
+      <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+        Tags
+      </h1>
+      <p class="text-lg text-gray-600 dark:text-gray-400">
+        Browse posts by topic.
+      </p>
+    </header>
+
+    {sortedTags.length > 0 ? (
+      <ul class="flex flex-wrap gap-3">
+        {sortedTags.map(([tag, count]) => (
+          <li>
+            <a
+              href={`/tags/${tag}`}
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+            >
+              <span>#{tag}</span>
+              <span class="text-sm text-gray-500 dark:text-gray-500">({count})</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="text-gray-600 dark:text-gray-400">
+        No tags yet.
+      </p>
+    )}
+  </div>
+</BaseLayout>

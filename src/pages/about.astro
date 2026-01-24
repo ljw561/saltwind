@@ -1,0 +1,47 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="About - Saltwind"
+  description="Learn more about Saltwind and its author"
+>
+  <div class="max-w-4xl mx-auto px-4 py-12">
+    <header class="mb-12">
+      <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+        About
+      </h1>
+    </header>
+
+    <div class="prose dark:prose-invert max-w-none">
+      <p>
+        Welcome to <strong>Saltwind</strong>, a static blog built with modern web technologies.
+      </p>
+
+      <h2>The Stack</h2>
+      <p>
+        This site is built with:
+      </p>
+      <ul>
+        <li><strong>Astro</strong> - A modern static site generator that ships zero JavaScript by default</li>
+        <li><strong>Tailwind CSS</strong> - A utility-first CSS framework for rapid UI development</li>
+        <li><strong>MDX</strong> - Markdown with embedded components for rich content</li>
+      </ul>
+
+      <h2>Features</h2>
+      <ul>
+        <li>Blazing fast static pages</li>
+        <li>Dark mode support with system preference detection</li>
+        <li>SEO optimized with Open Graph tags</li>
+        <li>RSS feed for content syndication</li>
+        <li>Tags for content organization</li>
+        <li>Responsive design for all devices</li>
+      </ul>
+
+      <h2>Get in Touch</h2>
+      <p>
+        Feel free to reach out via email or connect on social media.
+      </p>
+    </div>
+  </div>
+</BaseLayout>

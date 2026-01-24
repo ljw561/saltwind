@@ -1,0 +1,95 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostCard from '../../components/PostCard.astro';
+
+// Tag aliases: English slug -> [accepted tags]
+const tagAliases: Record<string, { title: string; aliases: string[] }> = {
+  'life': { title: '生活', aliases: ['life', '生活'] },
+  'making': { title: '製作', aliases: ['making', '製作'] },
+  'obj': { title: '物件', aliases: ['obj', '物件'] },
+};
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog', ({ data }) => !data.draft);
+
+  // Get all unique tags from posts
+  const postTags = [...new Set(posts.flatMap((post) => post.data.tags))];
+
+  // Build paths for aliased tags
+  const aliasedPaths = Object.entries(tagAliases).map(([slug, { title, aliases }]) => ({
+    params: { tag: slug },
+    props: {
+      tag: slug,
+      displayTitle: title,
+      posts: posts
+        .filter((post) => post.data.tags.some((t) => aliases.includes(t)))
+        .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()),
+    },
+  }));
+
+  // Build paths for other tags (not covered by aliases)
+  const aliasedTagNames = Object.values(tagAliases).flatMap((v) => v.aliases);
+  const otherTags = postTags.filter((t) => !aliasedTagNames.includes(t));
+
+  const otherPaths = otherTags.map((tag) => ({
+    params: { tag },
+    props: {
+      tag,
+      displayTitle: tag,
+      posts: posts
+        .filter((post) => post.data.tags.includes(tag))
+        .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()),
+    },
+  }));
+
+  return [...aliasedPaths, ...otherPaths];
+}
+
+interface Props {
+  tag: string;
+  displayTitle: string;
+  posts: Awaited<ReturnType<typeof getCollection<'blog'>>>;
+}
+
+const { tag, displayTitle, posts } = Astro.props;
+---
+
+<BaseLayout
+  title={`${displayTitle} - Saltwind`}
+  description={`${displayTitle}的所有文章`}
+>
+  <div class="max-w-4xl mx-auto px-4 py-12">
+    <header class="mb-12">
+      <a
+        href="/"
+        class="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors mb-4"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        首頁
+      </a>
+      <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+        {displayTitle}
+      </h1>
+      <p class="text-lg text-gray-600 dark:text-gray-400">
+        {posts.length} 篇文章
+      </p>
+    </header>
+
+    {posts.length > 0 ? (
+      <ul class="space-y-8">
+        {posts.map((post) => (
+          <li class="pb-8 border-b border-gray-200 dark:border-gray-800 last:border-b-0 last:pb-0">
+            <PostCard post={post} />
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="text-gray-600 dark:text-gray-400">
+        還沒有文章。
+      </p>
+    )}
+  </div>
+</BaseLayout>

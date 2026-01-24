@@ -1,0 +1,92 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PostCard from '../components/PostCard.astro';
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .slice(0, 5);
+
+const categories = [
+  {
+    title: '生活',
+    description: '瑣碎、雜事、一些我自己都懶得解釋的日常。',
+    href: '/tags/life',
+  },
+  {
+    title: '製作',
+    description: '從「我覺得可以」到「我到底在幹嘛」的全紀錄。',
+    href: '/tags/making',
+  },
+  {
+    title: '物件',
+    description: '做完了、能用、能複製；附做法或心得，拿去用。',
+    href: '/tags/obj',
+  },
+];
+---
+
+<BaseLayout
+  title="Saltwind"
+  description="生活我會記，製作我會寫，物件我會交作業。"
+>
+  <div class="max-w-4xl mx-auto px-4 py-12">
+    <section class="mb-16">
+      <h1 class="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+        Saltwind
+      </h1>
+      <p class="text-xl text-gray-600 dark:text-gray-400 mb-2">
+        生活我會記，製作我會寫，物件我會交作業。
+      </p>
+      <p class="text-sm text-gray-500 dark:text-gray-500">
+        不賣情緒，只留證據。
+      </p>
+    </section>
+
+    <section class="mb-16">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {categories.map(({ title, description, href }) => (
+          <a
+            href={href}
+            class="block p-6 border border-gray-200 dark:border-gray-800 rounded-lg hover:border-primary-500 dark:hover:border-primary-500 transition-colors"
+          >
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              {title}
+            </h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              {description}
+            </p>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section>
+      <div class="flex items-center justify-between mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+          最新更新
+        </h2>
+        <a
+          href="/blog"
+          class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+        >
+          View all posts &rarr;
+        </a>
+      </div>
+
+      {posts.length > 0 ? (
+        <ul class="space-y-8">
+          {posts.map((post) => (
+            <li class="pb-8 border-b border-gray-200 dark:border-gray-800 last:border-b-0 last:pb-0">
+              <PostCard post={post} />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="text-gray-600 dark:text-gray-400">
+          No posts yet. Check back soon!
+        </p>
+      )}
+    </section>
+  </div>
+</BaseLayout>
