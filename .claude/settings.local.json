@@ -10,7 +10,8 @@
       "Bash(git add:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nfix: simplify tag page to fix tagAliases undefined error\n\nRemove unused tagAliases logic that was causing build failures on Cloudflare.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git push:*)",
-      "WebFetch(domain:www.notion.so)"
+      "WebFetch(domain:www.notion.so)",
+      "Bash(git commit:*)"
     ]
   }
 }
