@@ -100,3 +100,32 @@ img {
 .dark .prose blockquote {
   color: #9ca3af;
 }
+
+/* Responsive images in prose */
+.prose img {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.prose figure {
+  margin: 2rem 0;
+}
+
+.prose figure img {
+  margin-bottom: 0.75rem;
+}
+
+.prose figcaption {
+  text-align: center;
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-top: 0.5rem;
+}
+
+.dark .prose figcaption {
+  color: #9ca3af;
+}
