@@ -40,3 +40,16 @@ const { title, description, image = '/images/og-default.png' } = Astro.props;
 
 <!-- RSS -->
 <link rel="alternate" type="application/rss+xml" title="RSS Feed" href="/rss.xml" />
+
+<!-- Dark mode detection -->
+<script is:inline>
+  (function() {
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    }
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+      document.documentElement.classList.toggle('dark', e.matches);
+    });
+  })();
+</script>
