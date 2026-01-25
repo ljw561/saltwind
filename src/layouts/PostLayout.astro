@@ -50,7 +50,8 @@ const formattedUpdatedDate = updatedDate?.toLocaleDateString('en-US', {
       {heroImage && (
         <img
           src={heroImage}
-          alt=""
+          alt={title}
+          loading="lazy"
           class="mt-8 w-full rounded-lg object-cover"
         />
       )}

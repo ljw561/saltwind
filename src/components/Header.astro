@@ -15,14 +15,14 @@ const currentPath = Astro.url.pathname;
       Saltwind
     </a>
 
-    <div class="flex items-center gap-6">
-      <ul class="flex items-center gap-4">
+    <div class="flex items-center">
+      <ul class="flex items-center gap-2 sm:gap-4">
         {navItems.map(({ href, label }) => (
           <li>
             <a
               href={href}
               class:list={[
-                'text-sm font-medium transition-colors',
+                'text-sm font-medium transition-colors px-2 py-1',
                 currentPath === href || (href !== '/' && currentPath.startsWith(href))
                   ? 'text-primary-600 dark:text-primary-400'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -33,7 +33,6 @@ const currentPath = Astro.url.pathname;
           </li>
         ))}
       </ul>
-
     </div>
   </nav>
 </header>
