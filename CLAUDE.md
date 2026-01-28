@@ -81,5 +81,47 @@ Every update to this project MUST follow these rules:
 
 ### 4. Tag System
 - Tag mapping is defined in `src/pages/tags/[tag].astro`
-- Current mappings: `物件` → `obj` (URL: `/tags/obj/`)
+- Current mappings: `生活` → `life`, `製作` → `making`, `物件` → `obj`
 - Both display name and URL slug are handled automatically
+
+### 5. Bilingual Content (Chinese + English)
+When adding a new blog post, ALWAYS create both Chinese and English versions:
+
+#### File Structure
+- Chinese: `src/content/blog/YYYY-MM-DDXX.mdx`
+- English: `src/content/blog-en/YYYY-MM-DDXX.mdx`
+- **File names must be identical** between Chinese and English versions
+
+#### Translation Guidelines
+- Use casual, conversational English — avoid fancy or uncommon words
+- Keep the same structure and meaning as the Chinese version
+- Translate image `alt` text and `figcaption` content
+- Update internal links to point to the correct language version:
+  - Chinese article links: `/blog/...`
+  - English article links: `/en/blog/...`
+
+#### Tag Mapping (English)
+- `life` → "Life"
+- `making` → "Making"
+- `obj` → "Objects"
+
+#### Example Frontmatter
+Chinese (`src/content/blog/2026-01-28XX.mdx`):
+```yaml
+---
+title: "文章標題"
+description: "文章描述"
+pubDate: 2026-01-28
+tags: ["物件"]
+---
+```
+
+English (`src/content/blog-en/2026-01-28XX.mdx`):
+```yaml
+---
+title: "Article Title"
+description: "Article description"
+pubDate: 2026-01-28
+tags: ["obj"]
+---
+```
