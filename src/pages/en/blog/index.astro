@@ -1,0 +1,40 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import PostCard from '../../../components/PostCard.astro';
+
+const posts = (await getCollection('blog-en', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+---
+
+<BaseLayout
+  title="Blog - Saltwind"
+  description="All blog posts on Saltwind"
+  lang="en"
+  alternateUrl="/blog/"
+>
+  <div class="max-w-4xl mx-auto px-4 py-12">
+    <header class="mb-12">
+      <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+        Articles
+      </h1>
+      <p class="text-lg text-gray-600 dark:text-gray-400">
+        All posts about fermentation, aging, cooking, and everyday observations.
+      </p>
+    </header>
+
+    {posts.length > 0 ? (
+      <ul class="space-y-8">
+        {posts.map((post) => (
+          <li class="pb-8 border-b border-gray-200 dark:border-gray-800 last:border-b-0 last:pb-0">
+            <PostCard post={post} basePath="/en/blog" />
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="text-gray-600 dark:text-gray-400">
+        No posts yet. Check back soon!
+      </p>
+    )}
+  </div>
+</BaseLayout>

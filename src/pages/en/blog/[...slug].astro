@@ -1,0 +1,24 @@
+---
+import { type CollectionEntry, getCollection } from 'astro:content';
+import PostLayout from '../../../layouts/PostLayout.astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog-en', ({ data }) => !data.draft);
+  return posts.map((post) => ({
+    params: { slug: post.slug },
+    props: post,
+  }));
+}
+
+type Props = CollectionEntry<'blog-en'>;
+
+const post = Astro.props;
+const { Content } = await post.render();
+
+// Get the corresponding Chinese article URL
+const chineseUrl = `/blog/${post.slug}/`;
+---
+
+<PostLayout post={post} lang="en" alternateUrl={chineseUrl}>
+  <Content />
+</PostLayout>

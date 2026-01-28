@@ -1,5 +1,11 @@
 ---
+import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostCard from '../../components/PostCard.astro';
+
+const posts = (await getCollection('blog-en', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .slice(0, 5);
 
 const categories = [
   {
@@ -16,20 +22,6 @@ const categories = [
     title: 'Objects',
     description: 'Done, functional, reproducible. With methods or notes — take it.',
     href: '/tags/obj',
-  },
-];
-
-// Placeholder links for future English articles
-const englishArticles = [
-  {
-    title: 'How to Make Authentic Carbonara',
-    description: 'The Roman version with Guanciale and egg yolk — no cream.',
-    href: '/blog/2026-01-2502/',
-  },
-  {
-    title: 'Making Guanciale in Taiwan\'s Climate',
-    description: 'A practical guide to avoid rancidity using paper bag aging.',
-    href: '/blog/2026-01-2801/',
   },
 ];
 ---
@@ -72,23 +64,31 @@ const englishArticles = [
     </section>
 
     <section class="mb-16">
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-8">
-        Featured Articles
-      </h2>
-      <ul class="space-y-6">
-        {englishArticles.map(({ title, description, href }) => (
-          <li class="pb-6 border-b border-gray-200 dark:border-gray-800 last:border-b-0 last:pb-0">
-            <a href={href} class="block group">
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors mb-1">
-                {title}
-              </h3>
-              <p class="text-sm text-gray-600 dark:text-gray-400">
-                {description}
-              </p>
-            </a>
-          </li>
-        ))}
-      </ul>
+      <div class="flex items-center justify-between mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+          Latest Posts
+        </h2>
+        <a
+          href="/en/blog"
+          class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+        >
+          View all posts &rarr;
+        </a>
+      </div>
+
+      {posts.length > 0 ? (
+        <ul class="space-y-8">
+          {posts.map((post) => (
+            <li class="pb-8 border-b border-gray-200 dark:border-gray-800 last:border-b-0 last:pb-0">
+              <PostCard post={post} basePath="/en/blog" />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="text-gray-600 dark:text-gray-400">
+          No posts yet. Check back soon!
+        </p>
+      )}
     </section>
 
     <section class="p-6 bg-gray-50 dark:bg-gray-800 rounded-lg">

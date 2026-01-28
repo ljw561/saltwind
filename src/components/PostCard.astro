@@ -3,10 +3,11 @@ import type { CollectionEntry } from 'astro:content';
 import TagList from './TagList.astro';
 
 interface Props {
-  post: CollectionEntry<'blog'>;
+  post: CollectionEntry<'blog'> | CollectionEntry<'blog-en'>;
+  basePath?: string;
 }
 
-const { post } = Astro.props;
+const { post, basePath = '/blog' } = Astro.props;
 const { title, description, pubDate, tags } = post.data;
 
 const formattedDate = pubDate.toLocaleDateString('en-US', {
@@ -17,7 +18,7 @@ const formattedDate = pubDate.toLocaleDateString('en-US', {
 ---
 
 <article class="group">
-  <a href={`/blog/${post.slug}`} class="block">
+  <a href={`${basePath}/${post.slug}`} class="block">
     <h2 class="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
       {title}
     </h2>

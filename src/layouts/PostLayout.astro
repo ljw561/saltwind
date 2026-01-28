@@ -4,11 +4,17 @@ import BaseLayout from './BaseLayout.astro';
 import TagList from '../components/TagList.astro';
 
 interface Props {
-  post: CollectionEntry<'blog'>;
+  post: CollectionEntry<'blog'> | CollectionEntry<'blog-en'>;
+  lang?: 'zh-Hant' | 'en';
+  alternateUrl?: string;
 }
 
-const { post } = Astro.props;
+const { post, lang = 'zh-Hant', alternateUrl } = Astro.props;
 const { title, description, pubDate, updatedDate, heroImage, tags } = post.data;
+
+const isEnglish = lang === 'en';
+const blogListUrl = isEnglish ? '/en/blog' : '/blog';
+const backText = isEnglish ? 'Back to all posts' : '返回文章列表';
 
 const formattedPubDate = pubDate.toLocaleDateString('en-US', {
   year: 'numeric',
@@ -23,7 +29,7 @@ const formattedUpdatedDate = updatedDate?.toLocaleDateString('en-US', {
 });
 ---
 
-<BaseLayout title={title} description={description} image={heroImage}>
+<BaseLayout title={title} description={description} image={heroImage} lang={lang} alternateUrl={alternateUrl}>
   <article class="max-w-4xl mx-auto px-4 py-12">
     <header class="mb-8">
       <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
@@ -63,13 +69,13 @@ const formattedUpdatedDate = updatedDate?.toLocaleDateString('en-US', {
 
     <footer class="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800">
       <a
-        href="/blog"
+        href={blogListUrl}
         class="inline-flex items-center gap-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
         </svg>
-        Back to all posts
+        {backText}
       </a>
     </footer>
   </article>
