@@ -16,6 +16,9 @@ const slugToDisplay: Record<string, string> = {
   'obj': '物件',
 };
 
+// Fixed display order
+const tagOrder = ['life', 'making', 'obj'];
+
 // Get the URL slug for a tag
 function getTagSlug(tag: string): string {
   return tagMapping[tag] || tag;
@@ -32,14 +35,21 @@ const slugCounts = posts.reduce((acc, post) => {
   return acc;
 }, {} as Record<string, number>);
 
-// Convert to display format with slug for URL
+// Convert to display format with slug for URL, sorted by fixed order
 const sortedTags = Object.entries(slugCounts)
   .map(([slug, count]) => ({
     slug,
     displayName: slugToDisplay[slug] || slug,
     count,
   }))
-  .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  .sort((a, b) => {
+    const indexA = tagOrder.indexOf(a.slug);
+    const indexB = tagOrder.indexOf(b.slug);
+    if (indexA === -1 && indexB === -1) return a.displayName.localeCompare(b.displayName);
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
 ---
 
 <BaseLayout
