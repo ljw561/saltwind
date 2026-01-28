@@ -6,14 +6,16 @@ import PostCard from '../../components/PostCard.astro';
 export async function getStaticPaths() {
   // Tag mapping: display name -> URL slug
   const tagMapping: Record<string, string> = {
-    '物件': 'obj',
+    '生活': 'life',
     '製作': 'making',
+    '物件': 'obj',
   };
 
   // Reverse mapping: URL slug -> display name
   const slugToDisplay: Record<string, string> = {
-    'obj': '物件',
+    'life': '生活',
     'making': '製作',
+    'obj': '物件',
   };
 
   // Get the URL slug for a tag

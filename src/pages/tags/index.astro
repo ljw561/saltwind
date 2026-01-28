@@ -4,11 +4,15 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 // Tag mapping: display name -> URL slug
 const tagMapping: Record<string, string> = {
+  '生活': 'life',
+  '製作': 'making',
   '物件': 'obj',
 };
 
 // Reverse mapping: URL slug -> display name
 const slugToDisplay: Record<string, string> = {
+  'life': '生活',
+  'making': '製作',
   'obj': '物件',
 };
 
