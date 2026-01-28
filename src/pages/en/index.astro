@@ -1,0 +1,109 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const categories = [
+  {
+    title: 'Life',
+    description: 'Trivial matters, random stuff, things I can\'t bother explaining.',
+    href: '/tags/life',
+  },
+  {
+    title: 'Making',
+    description: 'From "I think I can" to "what am I doing" — the full record.',
+    href: '/tags/making',
+  },
+  {
+    title: 'Objects',
+    description: 'Done, functional, reproducible. With methods or notes — take it.',
+    href: '/tags/obj',
+  },
+];
+
+// Placeholder links for future English articles
+const englishArticles = [
+  {
+    title: 'How to Make Authentic Carbonara',
+    description: 'The Roman version with Guanciale and egg yolk — no cream.',
+    href: '/blog/2026-01-2502/',
+  },
+  {
+    title: 'Making Guanciale in Taiwan\'s Climate',
+    description: 'A practical guide to avoid rancidity using paper bag aging.',
+    href: '/blog/2026-01-2801/',
+  },
+];
+---
+
+<BaseLayout
+  title="Saltwind"
+  description="I document life, write about making, and submit objects as homework."
+  lang="en"
+  alternateUrl="/"
+>
+  <div class="max-w-4xl mx-auto px-4 py-12">
+    <section class="mb-16">
+      <h1 class="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-4">
+        Saltwind
+      </h1>
+      <p class="text-xl text-gray-600 dark:text-gray-400 mb-2">
+        I document life, write about making, and submit objects as homework.
+      </p>
+      <p class="text-sm text-gray-500 dark:text-gray-500">
+        No emotions for sale — only evidence.
+      </p>
+    </section>
+
+    <section class="mb-16">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {categories.map(({ title, description, href }) => (
+          <a
+            href={href}
+            class="block p-6 border border-gray-200 dark:border-gray-800 rounded-lg hover:border-primary-500 dark:hover:border-primary-500 transition-colors"
+          >
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              {title}
+            </h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400">
+              {description}
+            </p>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section class="mb-16">
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-8">
+        Featured Articles
+      </h2>
+      <ul class="space-y-6">
+        {englishArticles.map(({ title, description, href }) => (
+          <li class="pb-6 border-b border-gray-200 dark:border-gray-800 last:border-b-0 last:pb-0">
+            <a href={href} class="block group">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors mb-1">
+                {title}
+              </h3>
+              <p class="text-sm text-gray-600 dark:text-gray-400">
+                {description}
+              </p>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="p-6 bg-gray-50 dark:bg-gray-800 rounded-lg">
+      <p class="text-gray-600 dark:text-gray-400 mb-4">
+        Most content on this site is in Chinese. The English section is a work in progress.
+      </p>
+      <a
+        href="/"
+        class="inline-flex items-center gap-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        View Chinese version
+      </a>
+    </section>
+  </div>
+</BaseLayout>
