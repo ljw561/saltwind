@@ -7,11 +7,13 @@ export async function getStaticPaths() {
   // Tag mapping: display name -> URL slug
   const tagMapping: Record<string, string> = {
     '物件': 'obj',
+    '製作': 'making',
   };
 
   // Reverse mapping: URL slug -> display name
   const slugToDisplay: Record<string, string> = {
     'obj': '物件',
+    'making': '製作',
   };
 
   // Get the URL slug for a tag
