@@ -1,0 +1,91 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+
+// Tag mapping: display name -> URL slug
+const tagMapping: Record<string, string> = {
+  'life': 'life',
+  'making': 'making',
+  'obj': 'obj',
+};
+
+// Reverse mapping: URL slug -> display name (English)
+const slugToDisplay: Record<string, string> = {
+  'life': 'Life',
+  'making': 'Making',
+  'obj': 'Objects',
+};
+
+// Fixed display order
+const tagOrder = ['life', 'making', 'obj'];
+
+// Get the URL slug for a tag
+function getTagSlug(tag: string): string {
+  return tagMapping[tag] || tag;
+}
+
+const posts = await getCollection('blog-en', ({ data }) => !data.draft);
+
+// Get all unique tags with their counts, normalized by slug
+const slugCounts = posts.reduce((acc, post) => {
+  post.data.tags.forEach((tag) => {
+    const slug = getTagSlug(tag);
+    acc[slug] = (acc[slug] || 0) + 1;
+  });
+  return acc;
+}, {} as Record<string, number>);
+
+// Convert to display format with slug for URL, sorted by fixed order
+const sortedTags = Object.entries(slugCounts)
+  .map(([slug, count]) => ({
+    slug,
+    displayName: slugToDisplay[slug] || slug,
+    count,
+  }))
+  .sort((a, b) => {
+    const indexA = tagOrder.indexOf(a.slug);
+    const indexB = tagOrder.indexOf(b.slug);
+    if (indexA === -1 && indexB === -1) return a.displayName.localeCompare(b.displayName);
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
+---
+
+<BaseLayout
+  title="Tags - Saltwind"
+  description="Browse all tags on Saltwind"
+  lang="en"
+  alternateUrl="/tags/"
+>
+  <div class="max-w-4xl mx-auto px-4 py-12">
+    <header class="mb-12">
+      <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+        Tags
+      </h1>
+      <p class="text-lg text-gray-600 dark:text-gray-400">
+        Browse posts by topic.
+      </p>
+    </header>
+
+    {sortedTags.length > 0 ? (
+      <ul class="flex flex-wrap gap-3">
+        {sortedTags.map(({ slug, displayName, count }) => (
+          <li>
+            <a
+              href={`/en/tags/${slug}`}
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+            >
+              <span>#{displayName}</span>
+              <span class="text-sm text-gray-500 dark:text-gray-500">({count})</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p class="text-gray-600 dark:text-gray-400">
+        No tags yet.
+      </p>
+    )}
+  </div>
+</BaseLayout>
