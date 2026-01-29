@@ -125,3 +125,34 @@ pubDate: 2026-01-28
 tags: ["obj"]
 ---
 ```
+
+### 6. Paragraph Spacing (Reading Flow)
+All blog posts must have proper "breathing room" between paragraphs for comfortable reading:
+
+#### Principles
+- **One idea, one paragraph** — each independent thought should be its own paragraph
+- **Break long sentences** — split lengthy passages to create natural pause points
+- **Space before transitions** — add a blank line before words like「但」「然而」「不過」(but, however)
+- **Space after key statements** — important conclusions deserve their own line
+
+#### Formatting Rules
+- Use single blank lines between regular paragraphs
+- Use `---` (horizontal rule) to separate major sections
+- Lists and blockquotes should have blank lines before and after
+- Don't let two consecutive lines form a wall of text
+
+#### Example
+```markdown
+在德國，「獵人香腸」並不是靠重煙或強烈香料取勝。
+
+真正的獵人風味，來自於脂肪被妥善整理、香氣乾淨而克制。
+
+這份配方刻意不使用煙燻，改由杜松子建立森林感。
+```
+
+NOT:
+```markdown
+在德國，「獵人香腸」並不是靠重煙或強烈香料取勝。
+真正的獵人風味，來自於脂肪被妥善整理、香氣乾淨而克制。
+這份配方刻意不使用煙燻，改由杜松子建立森林感。
+```
