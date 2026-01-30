@@ -127,32 +127,42 @@ tags: ["obj"]
 ```
 
 ### 6. Paragraph Spacing (Reading Flow)
-All blog posts must have proper "breathing room" between paragraphs for comfortable reading:
+All blog posts must have proper "breathing room" between paragraphs for comfortable reading.
+
+**Goal: Give readers space to breathe. Every paragraph should feel like its own moment.**
 
 #### Principles
 - **One idea, one paragraph** — each independent thought should be its own paragraph
-- **Break long sentences** — split lengthy passages to create natural pause points
-- **Space before transitions** — add a blank line before words like「但」「然而」「不過」(but, however)
+- **Break long sentences** — if a sentence has two parts connected by a comma, consider splitting them
+- **Space before transitions** — add a blank line before words like「但」「然而」「不過」「這意味著」(but, however, this means)
 - **Space after key statements** — important conclusions deserve their own line
+- **Maximum 2-3 sentences per paragraph** — if longer, find a natural break point
 
 #### Formatting Rules
-- Use single blank lines between regular paragraphs
-- Use `---` (horizontal rule) to separate major sections
+- Use single blank lines between ALL paragraphs (no exceptions)
+- Use `---` (horizontal rule) to separate major topic shifts or before conclusions
 - Lists and blockquotes should have blank lines before and after
-- Don't let two consecutive lines form a wall of text
+- Never let two consecutive lines form a wall of text
+- After a colon (：), consider whether the following content should be a new paragraph
 
-#### Example
+#### When to Use Horizontal Rules (`---`)
+- Before a major conclusion or summary
+- When shifting from explanation to personal opinion
+- Before "延伸閱讀" or "Related Reading" sections
+- Between distinct phases in a process (e.g., in recipes)
+
+#### Example (Good)
 ```markdown
-在德國，「獵人香腸」並不是靠重煙或強烈香料取勝。
+這次處理的是一尾約 4 斤重的真鯛。
 
-真正的獵人風味，來自於脂肪被妥善整理、香氣乾淨而克制。
+我選擇給它完整熟成 7 天，不是為了追求誇張的風味轉變，而是讓肉質「安靜下來」。
 
-這份配方刻意不使用煙燻，改由杜松子建立森林感。
+把原本緊繃的纖維，慢慢鬆解成更細緻、甜感更清楚的狀態。
+
+這一尾魚，沒有任何一個部位被浪費。
 ```
 
-NOT:
+#### Example (Bad - too dense)
 ```markdown
-在德國，「獵人香腸」並不是靠重煙或強烈香料取勝。
-真正的獵人風味，來自於脂肪被妥善整理、香氣乾淨而克制。
-這份配方刻意不使用煙燻，改由杜松子建立森林感。
+這次處理的是一尾約 4 斤重的真鯛。我選擇給它完整熟成 7 天，不是為了追求誇張的風味轉變，而是讓肉質「安靜下來」，把原本緊繃的纖維，慢慢鬆解成更細緻、甜感更清楚的狀態。這一尾魚，沒有任何一個部位被浪費。
 ```
