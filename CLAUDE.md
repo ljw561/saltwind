@@ -66,11 +66,32 @@ Every update to this project MUST follow these rules:
 - Test builds to ensure proper rendering across different screen sizes
 - Use Tailwind responsive prefixes (sm:, md:, lg:) when needed
 
-### 2. Image Handling
+### 2. Image Handling (Cross-Browser Compatible)
 - Use `<figure>` tags for images in MDX content
-- Always include `loading="lazy"` for performance
-- Images automatically adapt via CSS (`max-width: 100%`, `height: auto`)
 - Provide meaningful `alt` text for accessibility
+- Images automatically adapt via CSS (`max-width: 100%`, `height: auto`)
+
+#### Required Attributes for Cross-Browser Compatibility
+Every `<img>` tag MUST include these attributes:
+- `loading="lazy"` — deferred loading for performance
+- `decoding="async"` — non-blocking image decoding (Safari, Chrome, Firefox)
+
+#### Standard Image Format
+```html
+<figure>
+  <img
+    src="IMAGE_URL"
+    alt="描述文字"
+    loading="lazy"
+    decoding="async"
+  />
+  <figcaption>圖說文字</figcaption>
+</figure>
+```
+
+#### Why These Attributes Matter
+- `loading="lazy"`: Delays loading off-screen images (supported in all modern browsers)
+- `decoding="async"`: Prevents image decoding from blocking the main thread, improves page responsiveness across Chrome, Firefox, Safari, and Edge
 
 ### 3. Auto Push to GitHub
 - After completing any changes, automatically run:
