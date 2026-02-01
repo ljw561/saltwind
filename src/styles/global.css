@@ -110,9 +110,8 @@ html.dark {
   color: #9ca3af;
 }
 
-/* Responsive images in prose */
+/* Responsive images in prose - preserve natural size, prevent overflow */
 .prose img {
-  width: 100%;
   max-width: 100%;
   height: auto;
   border-radius: 0.5rem;
