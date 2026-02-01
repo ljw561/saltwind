@@ -30,6 +30,11 @@ const currentTitleWords = new Set(
     .filter((word) => word.length > 1)
 );
 
+// Main category tags have minimal weight (every post has one, so less useful for relatedness)
+const mainCategoryTags = new Set(['生活', '製作', '物件', 'life', 'making', 'obj']);
+const MAIN_CATEGORY_WEIGHT = 0.1;
+const REGULAR_TAG_WEIGHT = 1;
+
 // Score and sort posts
 interface ScoredPost {
   post: CollectionEntry<'blog'> | CollectionEntry<'blog-en'>;
@@ -41,8 +46,13 @@ interface ScoredPost {
 const scoredPosts: ScoredPost[] = otherPosts.map((post) => {
   const postTags = post.data.tags || [];
 
-  // Calculate tag intersection score
-  const tagScore = postTags.filter((tag) => currentTags.has(tag)).length;
+  // Calculate tag intersection score (main categories weighted lower)
+  const tagScore = postTags
+    .filter((tag) => currentTags.has(tag))
+    .reduce((score, tag) => {
+      const weight = mainCategoryTags.has(tag) ? MAIN_CATEGORY_WEIGHT : REGULAR_TAG_WEIGHT;
+      return score + weight;
+    }, 0);
 
   // Calculate keyword similarity score (for fallback)
   const postTitleWords = post.data.title
