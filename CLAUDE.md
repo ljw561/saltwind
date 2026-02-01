@@ -187,3 +187,25 @@ All blog posts must have proper "breathing room" between paragraphs for comforta
 ```markdown
 這次處理的是一尾約 4 斤重的真鯛。我選擇給它完整熟成 7 天，不是為了追求誇張的風味轉變，而是讓肉質「安靜下來」，把原本緊繃的纖維，慢慢鬆解成更細緻、甜感更清楚的狀態。這一尾魚，沒有任何一個部位被浪費。
 ```
+
+### 7. Related Posts (Automatic)
+Every blog post automatically displays a "延伸閱讀" (Related Posts) section at the end.
+
+#### How It Works
+- **Built at build time (SSG)** — no runtime overhead
+- **Ranking algorithm**:
+  1. Tag intersection count (more shared tags = higher priority)
+  2. Title keyword similarity (fallback when no tag matches)
+  3. Publication date (newer first, as tie-breaker)
+- **Displays 6 posts** by default, excludes current article
+- **SEO-friendly** — outputs standard `<a href>` links crawlable by search engines
+
+#### Implementation
+- Component: `src/components/RelatedPosts.astro`
+- Integrated in: `src/layouts/PostLayout.astro`
+- Supports both `blog` (Chinese) and `blog-en` (English) collections
+
+#### No Manual Action Required
+This feature is automatic. When you add a new blog post:
+- It will appear in other posts' related sections (if relevant)
+- It will show its own related posts at the bottom
