@@ -101,8 +101,19 @@ Every `<img>` tag MUST include these attributes:
   4. `git push` - Push to GitHub
 
 ### 4. Tag System
+
+#### Main Categories (REQUIRED)
+Every blog post MUST include exactly ONE of these three main categories as the FIRST tag:
+
+| Chinese | English | Description |
+|---------|---------|-------------|
+| 生活 | life | 瑣碎、雜事、日常想法、分析觀點 |
+| 製作 | making | 實驗中、過程紀錄、製作筆記 |
+| 物件 | obj | 做完了、能用、附做法或完整指南 |
+
+#### Tag Mapping
 - Tag mapping is defined in `src/pages/tags/[tag].astro`
-- Current mappings: `生活` → `life`, `製作` → `making`, `物件` → `obj`
+- Main category mappings: `生活` → `life`, `製作` → `making`, `物件` → `obj`
 - Both display name and URL slug are handled automatically
 
 ### 5. Bilingual Content (Chinese + English)
@@ -133,7 +144,7 @@ Chinese (`src/content/blog/2026-01-28XX.mdx`):
 title: "文章標題"
 description: "文章描述"
 pubDate: 2026-01-28
-tags: ["物件"]
+tags: ["物件", "其他標籤"]  # 主分類必須放第一個
 ---
 ```
 
@@ -143,7 +154,7 @@ English (`src/content/blog-en/2026-01-28XX.mdx`):
 title: "Article Title"
 description: "Article description"
 pubDate: 2026-01-28
-tags: ["obj"]
+tags: ["obj", "other-tag"]  # Main category must be first
 ---
 ```
 
