@@ -19,6 +19,11 @@ html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
 }
 
 body {
@@ -41,9 +46,13 @@ img {
   }
 }
 
-/* Dark mode support */
-.dark {
-  color-scheme: dark;
+/* Dark mode transition prevention - avoid FOUC */
+html {
+  background-color: #fff;
+}
+
+html.dark {
+  background-color: #111827;
 }
 
 /* Prose styles for blog content */

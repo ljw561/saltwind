@@ -60,7 +60,8 @@ const formattedUpdatedDate = updatedDate?.toLocaleDateString('en-US', {
           src={heroImage}
           alt={title}
           loading="lazy"
-          class="mt-8 w-full rounded-lg object-cover"
+          decoding="async"
+          class="mt-8 w-full rounded-lg object-cover aspect-video"
         />
       )}
     </header>
