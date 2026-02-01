@@ -1,0 +1,112 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { getCollection } from 'astro:content';
+
+interface Props {
+  currentPost: CollectionEntry<'blog'> | CollectionEntry<'blog-en'>;
+  collection: 'blog' | 'blog-en';
+  maxPosts?: number;
+}
+
+const { currentPost, collection, maxPosts = 6 } = Astro.props;
+
+const isEnglish = collection === 'blog-en';
+const basePath = isEnglish ? '/en/blog' : '/blog';
+const sectionTitle = isEnglish ? 'Related Posts' : '延伸閱讀';
+
+// Get all posts from the same collection (excluding drafts)
+const allPosts = await getCollection(collection, ({ data }) => !data.draft);
+
+// Exclude current post
+const otherPosts = allPosts.filter((post) => post.slug !== currentPost.slug);
+
+// Get current post's tags and title words for matching
+const currentTags = new Set(currentPost.data.tags || []);
+const currentTitleWords = new Set(
+  currentPost.data.title
+    .toLowerCase()
+    .replace(/[^\w\s\u4e00-\u9fff]/g, '') // Keep alphanumeric and Chinese characters
+    .split(/\s+/)
+    .filter((word) => word.length > 1)
+);
+
+// Score and sort posts
+interface ScoredPost {
+  post: CollectionEntry<'blog'> | CollectionEntry<'blog-en'>;
+  tagScore: number;
+  keywordScore: number;
+  pubDate: Date;
+}
+
+const scoredPosts: ScoredPost[] = otherPosts.map((post) => {
+  const postTags = post.data.tags || [];
+
+  // Calculate tag intersection score
+  const tagScore = postTags.filter((tag) => currentTags.has(tag)).length;
+
+  // Calculate keyword similarity score (for fallback)
+  const postTitleWords = post.data.title
+    .toLowerCase()
+    .replace(/[^\w\s\u4e00-\u9fff]/g, '')
+    .split(/\s+/)
+    .filter((word) => word.length > 1);
+
+  const keywordScore = postTitleWords.filter((word) => currentTitleWords.has(word)).length;
+
+  return {
+    post,
+    tagScore,
+    keywordScore,
+    pubDate: post.data.pubDate,
+  };
+});
+
+// Sort by: tag score (desc) -> keyword score (desc) -> date (desc, newer first)
+scoredPosts.sort((a, b) => {
+  if (b.tagScore !== a.tagScore) {
+    return b.tagScore - a.tagScore;
+  }
+  if (b.keywordScore !== a.keywordScore) {
+    return b.keywordScore - a.keywordScore;
+  }
+  return b.pubDate.getTime() - a.pubDate.getTime();
+});
+
+// Take top N posts
+const relatedPosts = scoredPosts.slice(0, maxPosts).map((sp) => sp.post);
+---
+
+{relatedPosts.length > 0 && (
+  <section class="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6">
+      {sectionTitle}
+    </h2>
+    <ul class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {relatedPosts.map((post) => (
+        <li>
+          <a
+            href={`${basePath}/${post.slug}/`}
+            class="block p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+          >
+            <h3 class="font-medium text-gray-900 dark:text-white line-clamp-2 mb-2">
+              {post.data.title}
+            </h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+              {post.data.description}
+            </p>
+            <time
+              datetime={post.data.pubDate.toISOString()}
+              class="block mt-2 text-xs text-gray-500 dark:text-gray-500"
+            >
+              {post.data.pubDate.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+              })}
+            </time>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+)}
