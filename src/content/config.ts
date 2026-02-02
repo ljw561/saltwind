@@ -6,6 +6,8 @@ const blogSchema = z.object({
   pubDate: z.coerce.date(),
   updatedDate: z.coerce.date().optional(),
   heroImage: z.string().optional(),
+  heroWidth: z.number().optional(),  // For CLS: image width in pixels
+  heroHeight: z.number().optional(), // For CLS: image height in pixels
   tags: z.array(z.string()).default([]),
   draft: z.boolean().default(false),
 });

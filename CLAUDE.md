@@ -144,6 +144,9 @@ Chinese (`src/content/blog/2026-01-28XX.mdx`):
 title: "文章標題"
 description: "文章描述"
 pubDate: 2026-01-28
+heroImage: "https://example.com/image.jpg"  # optional
+heroWidth: 1200   # optional: for CLS prevention
+heroHeight: 800   # optional: for CLS prevention
 tags: ["物件", "其他標籤"]  # 主分類必須放第一個
 ---
 ```
@@ -154,9 +157,18 @@ English (`src/content/blog-en/2026-01-28XX.mdx`):
 title: "Article Title"
 description: "Article description"
 pubDate: 2026-01-28
+heroImage: "https://example.com/image.jpg"  # optional
+heroWidth: 1200   # optional: for CLS prevention
+heroHeight: 800   # optional: for CLS prevention
 tags: ["obj", "other-tag"]  # Main category must be first
 ---
 ```
+
+#### Hero Image Guidelines
+- `heroWidth` and `heroHeight` are optional but recommended for CLS prevention
+- If provided, they set the aspect-ratio to reserve space before image loads
+- Portrait images will display naturally (not cropped into 16:9)
+- Maximum height is 70vh to prevent overly tall images on desktop
 
 ### 6. Paragraph Spacing (Reading Flow)
 All blog posts must have proper "breathing room" between paragraphs for comfortable reading.

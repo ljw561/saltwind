@@ -11,7 +11,11 @@ interface Props {
 }
 
 const { post, lang = 'zh-Hant', alternateUrl } = Astro.props;
-const { title, description, pubDate, updatedDate, heroImage, tags } = post.data;
+const { title, description, pubDate, updatedDate, heroImage, heroWidth, heroHeight, tags } = post.data;
+
+// Calculate aspect ratio for CLS prevention
+const hasHeroDimensions = heroWidth && heroHeight;
+const heroAspectRatio = hasHeroDimensions ? `${heroWidth} / ${heroHeight}` : null;
 
 const isEnglish = lang === 'en';
 const blogListUrl = isEnglish ? '/en/blog' : '/blog';
@@ -56,13 +60,20 @@ const formattedUpdatedDate = updatedDate?.toLocaleDateString('en-US', {
       )}
 
       {heroImage && (
-        <img
-          src={heroImage}
-          alt={title}
-          loading="lazy"
-          decoding="async"
-          class="mt-8 w-full rounded-lg object-contain md:object-cover aspect-video bg-gray-100 dark:bg-gray-800"
-        />
+        <div
+          class="mt-8 w-full max-h-[70vh] flex items-center justify-center"
+          style={heroAspectRatio ? `aspect-ratio: ${heroAspectRatio}` : undefined}
+        >
+          <img
+            src={heroImage}
+            alt={title}
+            loading="lazy"
+            decoding="async"
+            width={heroWidth}
+            height={heroHeight}
+            class="w-full h-auto max-h-[70vh] rounded-lg object-contain"
+          />
+        </div>
       )}
     </header>
 
