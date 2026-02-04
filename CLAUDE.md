@@ -119,9 +119,18 @@ Every blog post MUST include exactly ONE of these three main categories as the F
 ### 5. Bilingual Content (Chinese + English)
 When adding a new blog post, ALWAYS create both Chinese and English versions:
 
+#### Filename Convention (REQUIRED)
+- Format: `YYYY-MM-DD##.mdx`
+- `YYYY-MM-DD` = publication date (e.g., `2026-02-04`)
+- `##` = two-digit sequence number (01-99), starting from 01 for the first article of the day
+- Examples:
+  - First article on Feb 4: `2026-02-0401.mdx`
+  - Second article on Feb 4: `2026-02-0402.mdx`
+  - Only article on Feb 5: `2026-02-0501.mdx`
+
 #### File Structure
-- Chinese: `src/content/blog/YYYY-MM-DDXX.mdx`
-- English: `src/content/blog-en/YYYY-MM-DDXX.mdx`
+- Chinese: `src/content/blog/YYYY-MM-DD##.mdx`
+- English: `src/content/blog-en/YYYY-MM-DD##.mdx`
 - **File names must be identical** between Chinese and English versions
 
 #### Translation Guidelines
@@ -138,7 +147,7 @@ When adding a new blog post, ALWAYS create both Chinese and English versions:
 - `obj` → "Objects"
 
 #### Example Frontmatter
-Chinese (`src/content/blog/2026-01-28XX.mdx`):
+Chinese (`src/content/blog/2026-01-2801.mdx`):
 ```yaml
 ---
 title: "文章標題"
@@ -151,7 +160,7 @@ tags: ["物件", "其他標籤"]  # 主分類必須放第一個
 ---
 ```
 
-English (`src/content/blog-en/2026-01-28XX.mdx`):
+English (`src/content/blog-en/2026-01-2801.mdx`):
 ```yaml
 ---
 title: "Article Title"
