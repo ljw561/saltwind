@@ -2,6 +2,7 @@
 import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import SchemaJsonLd from '../components/SchemaJsonLd.astro';
 import '../styles/global.css';
 
 interface Props {
@@ -10,9 +11,10 @@ interface Props {
   image?: string;
   lang?: 'zh-Hant' | 'en';
   alternateUrl?: string;
+  skipGlobalSchema?: boolean;
 }
 
-const { title, description, image, lang = 'zh-Hant', alternateUrl } = Astro.props;
+const { title, description, image, lang = 'zh-Hant', alternateUrl, skipGlobalSchema = false } = Astro.props;
 ---
 
 <!doctype html>
@@ -32,6 +34,12 @@ const { title, description, image, lang = 'zh-Hant', alternateUrl } = Astro.prop
       })();
     </script>
     <BaseHead title={title} description={description} image={image} lang={lang} alternateUrl={alternateUrl} />
+    {!skipGlobalSchema && (
+      <>
+        <SchemaJsonLd schema={{ type: 'WebSite', lang }} />
+        <SchemaJsonLd schema={{ type: 'Organization' }} />
+      </>
+    )}
   </head>
   <body class="min-h-screen flex flex-col bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
     <Header />

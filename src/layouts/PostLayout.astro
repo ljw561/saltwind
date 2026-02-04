@@ -3,6 +3,7 @@ import type { CollectionEntry } from 'astro:content';
 import BaseLayout from './BaseLayout.astro';
 import TagList from '../components/TagList.astro';
 import RelatedPosts from '../components/RelatedPosts.astro';
+import SchemaJsonLd from '../components/SchemaJsonLd.astro';
 
 interface Props {
   post: CollectionEntry<'blog'> | CollectionEntry<'blog-en'>;
@@ -12,6 +13,10 @@ interface Props {
 
 const { post, lang = 'zh-Hant', alternateUrl } = Astro.props;
 const { title, description, pubDate, updatedDate, heroImage, heroWidth, heroHeight, tags } = post.data;
+
+// Build canonical URL for BlogPosting schema
+const basePath = lang === 'en' ? '/en/blog' : '/blog';
+const canonicalUrl = `https://saltwind.co${basePath}/${post.slug}/`;
 
 // Calculate aspect ratio for CLS prevention
 const hasHeroDimensions = heroWidth && heroHeight;
@@ -82,6 +87,20 @@ const formattedUpdatedDate = updatedDate?.toLocaleDateString('en-US', {
     </div>
 
     <RelatedPosts currentPost={post} collection={collection} />
+
+    <SchemaJsonLd
+      schema={{
+        type: 'BlogPosting',
+        title,
+        description,
+        pubDate,
+        updatedDate,
+        url: canonicalUrl,
+        tags,
+        lang,
+        image: heroImage,
+      }}
+    />
 
     <footer class="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800">
       <a

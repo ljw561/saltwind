@@ -1,0 +1,114 @@
+---
+/**
+ * JSON-LD Schema Component
+ * Renders structured data for SEO (WebSite, Organization, BlogPosting)
+ */
+
+interface WebSiteSchema {
+  type: 'WebSite';
+  lang: 'zh-Hant' | 'en';
+}
+
+interface OrganizationSchema {
+  type: 'Organization';
+}
+
+interface BlogPostingSchema {
+  type: 'BlogPosting';
+  title: string;
+  description: string;
+  pubDate: Date;
+  updatedDate?: Date;
+  url: string;
+  tags: string[];
+  lang: 'zh-Hant' | 'en';
+  image?: string;
+}
+
+type SchemaProps = WebSiteSchema | OrganizationSchema | BlogPostingSchema;
+
+interface Props {
+  schema: SchemaProps;
+}
+
+const { schema } = Astro.props;
+
+const SITE_URL = 'https://saltwind.co';
+const SITE_NAME = 'Saltwind';
+const LOGO_URL = `${SITE_URL}/favicon.png`;
+const AUTHOR_NAME = 'Bruce Liu';
+const AUTHOR_SAME_AS = ['https://www.facebook.com/ljw561/'];
+
+function getInLanguage(lang: 'zh-Hant' | 'en'): string {
+  return lang === 'en' ? 'en' : 'zh-TW';
+}
+
+function generateSchema(schema: SchemaProps): object {
+  if (schema.type === 'WebSite') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: SITE_NAME,
+      url: SITE_URL,
+      inLanguage: getInLanguage(schema.lang),
+    };
+  }
+
+  if (schema.type === 'Organization') {
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: LOGO_URL,
+      sameAs: AUTHOR_SAME_AS,
+    };
+  }
+
+  if (schema.type === 'BlogPosting') {
+    const dateModified = schema.updatedDate || schema.pubDate;
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'BlogPosting',
+      headline: schema.title,
+      description: schema.description,
+      datePublished: schema.pubDate.toISOString(),
+      dateModified: dateModified.toISOString(),
+      mainEntityOfPage: {
+        '@type': 'WebPage',
+        '@id': schema.url,
+      },
+      author: {
+        '@type': 'Person',
+        name: AUTHOR_NAME,
+        url: SITE_URL,
+        sameAs: AUTHOR_SAME_AS,
+      },
+      publisher: {
+        '@type': 'Organization',
+        name: SITE_NAME,
+        url: SITE_URL,
+        logo: {
+          '@type': 'ImageObject',
+          url: LOGO_URL,
+        },
+      },
+      inLanguage: getInLanguage(schema.lang),
+      keywords: schema.tags.join(', '),
+      ...(schema.image && {
+        image: {
+          '@type': 'ImageObject',
+          url: schema.image,
+        },
+      }),
+    };
+  }
+
+  return {};
+}
+
+const jsonLd = generateSchema(schema);
+const jsonString = JSON.stringify(jsonLd);
+---
+
+<script type="application/ld+json" set:html={jsonString} />
