@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://saltwind.co/sitemap-index.xml
