@@ -2,10 +2,14 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PostCard from '../components/PostCard.astro';
+import { getAllTopics, getTopicPostCounts } from '../lib/topics';
 
 const posts = (await getCollection('blog', ({ data }) => !data.draft))
   .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
   .slice(0, 5);
+
+const topicConfigs = getAllTopics();
+const topicCounts = await getTopicPostCounts('blog');
 
 const categories = [
   {
@@ -56,6 +60,32 @@ const categories = [
             </h3>
             <p class="text-sm text-gray-600 dark:text-gray-400">
               {description}
+            </p>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <section class="mb-16">
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+        研究主題
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {topicConfigs.map((topic) => (
+          <a
+            href={`/topics/${topic.slug}`}
+            class="block p-6 border border-gray-200 dark:border-gray-800 rounded-lg hover:border-primary-500 dark:hover:border-primary-500 transition-colors"
+          >
+            <div class="flex items-start justify-between">
+              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+                {topic.title}
+              </h3>
+              <span class="text-sm text-gray-500 dark:text-gray-400">
+                {topicCounts[topic.slug] || 0} 篇
+              </span>
+            </div>
+            <p class="mt-2 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+              {topic.description}
             </p>
           </a>
         ))}

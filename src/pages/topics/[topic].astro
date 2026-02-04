@@ -1,0 +1,130 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TagList from '../../components/TagList.astro';
+import { getAllTopics, getPostsByTopic, getPopularTagsInTopic } from '../../lib/topics';
+import { getTopicBySlug } from '../../lib/topicMap';
+
+export async function getStaticPaths() {
+  const topics = getAllTopics();
+
+  return topics.map((topic) => ({
+    params: { topic: topic.slug },
+  }));
+}
+
+const { topic: topicSlug } = Astro.params;
+const topicConfig = getTopicBySlug(topicSlug);
+
+if (!topicConfig) {
+  return Astro.redirect('/404');
+}
+
+const posts = await getPostsByTopic(topicSlug, 'blog');
+const popularTags = await getPopularTagsInTopic(topicSlug, 'blog', 8);
+
+// Tag slug mapping for links
+const tagToSlug: Record<string, string> = {
+  '生活': 'life',
+  '製作': 'making',
+  '物件': 'obj',
+  '發酵': 'fermentation',
+  '熟成': 'aging',
+  '熟肉': 'charcuterie',
+  '麵包': 'bread',
+  '咖啡': 'coffee',
+  '魚': 'fish',
+  '豬肉': 'pork',
+  '香腸': 'sausage',
+  '食譜': 'recipe',
+  '器具': 'equipment',
+  '台灣': 'taiwan',
+};
+const getTagSlug = (tag: string): string => tagToSlug[tag] || tag;
+---
+
+<BaseLayout
+  title={`${topicConfig.title} | Saltwind`}
+  description={topicConfig.description}
+>
+  <div class="max-w-4xl mx-auto px-4 py-12">
+    <nav class="mb-8">
+      <a
+        href="/"
+        class="text-sm text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+      >
+        &larr; 返回首頁
+      </a>
+    </nav>
+
+    <header class="mb-12">
+      <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+        {topicConfig.title}
+      </h1>
+      <p class="text-lg text-gray-600 dark:text-gray-400 mb-4">
+        {topicConfig.description}
+      </p>
+      <p class="text-sm text-gray-500 dark:text-gray-500">
+        共 {posts.length} 篇文章
+      </p>
+    </header>
+
+    {popularTags.length > 0 && (
+      <section class="mb-10">
+        <h2 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
+          相關標籤
+        </h2>
+        <div class="flex flex-wrap gap-2">
+          {popularTags.map(({ tag, count }) => (
+            <a
+              href={`/tags/${getTagSlug(tag)}`}
+              class="inline-flex items-center gap-1 px-3 py-1 text-sm rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
+            >
+              #{tag}
+              <span class="text-xs text-gray-400 dark:text-gray-500">({count})</span>
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+
+    <section>
+      {posts.length > 0 ? (
+        <ul class="space-y-8">
+          {posts.map((post) => (
+            <li class="pb-8 border-b border-gray-200 dark:border-gray-800 last:border-b-0 last:pb-0">
+              <article class="group">
+                <a href={`/blog/${post.slug}`} class="block">
+                  <h2 class="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                    {post.data.title}
+                  </h2>
+                  <p class="mt-2 text-gray-600 dark:text-gray-400 line-clamp-2">
+                    {post.data.description}
+                  </p>
+                  <time
+                    class="mt-2 block text-sm text-gray-500 dark:text-gray-500"
+                    datetime={post.data.pubDate.toISOString()}
+                  >
+                    {post.data.pubDate.toLocaleDateString('zh-TW', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </time>
+                </a>
+                {post.data.tags.length > 0 && (
+                  <div class="mt-3">
+                    <TagList tags={post.data.tags} />
+                  </div>
+                )}
+              </article>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="text-gray-600 dark:text-gray-400">
+          這個主題還沒有文章，敬請期待！
+        </p>
+      )}
+    </section>
+  </div>
+</BaseLayout>
