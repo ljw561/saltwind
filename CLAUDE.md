@@ -194,16 +194,21 @@ All blog posts must have proper "breathing room" between paragraphs for comforta
 
 #### Formatting Rules
 - Use single blank lines between ALL paragraphs (no exceptions)
-- Use `---` (horizontal rule) to separate major topic shifts or before conclusions
+- Do not insert `---` as a routine section divider — see "When to Use Horizontal Rules" below
 - Lists and blockquotes should have blank lines before and after
 - Never let two consecutive lines form a wall of text
 - After a colon (：), consider whether the following content should be a new paragraph
 
 #### When to Use Horizontal Rules (`---`)
-- Before a major conclusion or summary
-- When shifting from explanation to personal opinion
-- Before "延伸閱讀" or "Related Reading" sections
-- Between distinct phases in a process (e.g., in recipes)
+`##` / `###` headings already give a section both visual and semantic separation, and `.prose hr` in `src/styles/global.css` renders `---` as a short, quiet line — not a strong divider. Because of that, `---` should stay rare and deliberate, not a reflex habit.
+
+- Do **not** add `---` before every heading — the heading itself is already the separator.
+- Only use `---` for a genuine large-scale narrative or phase shift (e.g. moving from one clearly distinct stage of a process to another within the same section) — not at every small step.
+- Use it sparingly. Most articles should contain few or zero `---`, not one before each subsection.
+- If a heading already precedes the conclusion, that heading is enough — don't also add `---` in front of it.
+- Don't automatically add `---` before or after an inserted image/`<figure>`.
+- Don't reach for `---` just to "add breathing room" — that's what paragraph spacing and heading structure are for. Let CSS handle the visual rhythm.
+- New articles should rely primarily on natural paragraphs and heading structure for layout, treating `---` as an occasional exception, not a default.
 
 #### Example (Good)
 ```markdown

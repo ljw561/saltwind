@@ -110,6 +110,19 @@ html.dark {
   color: #9ca3af;
 }
 
+/* Section-break hr: short, centered, faint. Not a strong divider —
+   just a quiet pause between paragraphs/phases. */
+.prose hr {
+  width: 30%;
+  margin: 3rem auto;
+  border: none;
+  border-top: 1px solid #e5e7eb;
+}
+
+.dark .prose hr {
+  border-top-color: #1f2937;
+}
+
 /* Responsive images in prose - preserve natural size, prevent overflow */
 .prose img {
   max-width: 100%;
