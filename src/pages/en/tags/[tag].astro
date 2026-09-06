@@ -2,60 +2,9 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import PostCard from '../../../components/PostCard.astro';
+import { getTagSlug, getTagsForSlug, getTagDisplayName } from '../../../lib/tags';
 
 export async function getStaticPaths() {
-  // Tag mapping: tag value -> URL slug
-  const tagMapping: Record<string, string> = {
-    'life': 'life',
-    'making': 'making',
-    'obj': 'obj',
-    'fermentation': 'fermentation',
-    'aging': 'aging',
-    'charcuterie': 'charcuterie',
-    'bread': 'bread',
-    'coffee': 'coffee',
-    'fish': 'fish',
-    'pork': 'pork',
-    'sausage': 'sausage',
-    'recipe': 'recipe',
-    'equipment': 'equipment',
-    'taiwan': 'taiwan',
-  };
-
-  // Reverse mapping: URL slug -> display name (English)
-  const slugToDisplay: Record<string, string> = {
-    'life': 'Life',
-    'making': 'Making',
-    'obj': 'Objects',
-    'fermentation': 'Fermentation',
-    'aging': 'Aging',
-    'charcuterie': 'Charcuterie',
-    'bread': 'Bread',
-    'coffee': 'Coffee',
-    'fish': 'Fish',
-    'pork': 'Pork',
-    'sausage': 'Sausage',
-    'recipe': 'Recipe',
-    'equipment': 'Equipment',
-    'taiwan': 'Taiwan',
-  };
-
-  // Get the URL slug for a tag
-  const getTagSlug = (tag: string): string => {
-    return tagMapping[tag] || tag;
-  };
-
-  // Get all tags that map to a given slug
-  const getTagsForSlug = (slug: string): string[] => {
-    const tags = [slug];
-    for (const [displayTag, mappedSlug] of Object.entries(tagMapping)) {
-      if (mappedSlug === slug) {
-        tags.push(displayTag);
-      }
-    }
-    return tags;
-  };
-
   const posts = await getCollection('blog-en', ({ data }) => !data.draft);
 
   // Get all unique tags from posts
@@ -67,7 +16,7 @@ export async function getStaticPaths() {
   // Build paths for each unique slug
   return uniqueSlugs.map((slug) => {
     const relatedTags = getTagsForSlug(slug);
-    const displayTitle = slugToDisplay[slug] || slug;
+    const displayTitle = getTagDisplayName(slug, 'en');
 
     return {
       params: { tag: slug },

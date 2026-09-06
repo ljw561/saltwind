@@ -1,28 +1,10 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
-
-// Tag mapping: display name -> URL slug
-const tagMapping: Record<string, string> = {
-  'life': 'life',
-  'making': 'making',
-  'obj': 'obj',
-};
-
-// Reverse mapping: URL slug -> display name (English)
-const slugToDisplay: Record<string, string> = {
-  'life': 'Life',
-  'making': 'Making',
-  'obj': 'Objects',
-};
+import { getTagSlug, getTagDisplayName } from '../../../lib/tags';
 
 // Fixed display order
 const tagOrder = ['life', 'making', 'obj'];
-
-// Get the URL slug for a tag
-function getTagSlug(tag: string): string {
-  return tagMapping[tag] || tag;
-}
 
 const posts = await getCollection('blog-en', ({ data }) => !data.draft);
 
@@ -39,7 +21,7 @@ const slugCounts = posts.reduce((acc, post) => {
 const sortedTags = Object.entries(slugCounts)
   .map(([slug, count]) => ({
     slug,
-    displayName: slugToDisplay[slug] || slug,
+    displayName: getTagDisplayName(slug, 'en'),
     count,
   }))
   .sort((a, b) => {

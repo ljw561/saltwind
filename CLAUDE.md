@@ -112,9 +112,10 @@ Every blog post MUST include exactly ONE of these three main categories as the F
 | 物件 | obj | 做完了、能用、附做法或完整指南 |
 
 #### Tag Mapping
-- Tag mapping is defined in `src/pages/tags/[tag].astro`
+- Tag mapping (Chinese name ↔ English name ↔ URL slug) is defined in **`src/lib/tags.ts`** — this is the single source of truth.
 - Main category mappings: `生活` → `life`, `製作` → `making`, `物件` → `obj`
-- Both display name and URL slug are handled automatically
+- Both display name and URL slug are handled automatically via `getTagSlug()`, `getTagDisplayName()`, and `getTagsForSlug()` exported from that file.
+- **When adding, removing, or renaming a tag, only edit `src/lib/tags.ts`.** Do not re-declare a tag/slug/display-name mapping object in any page or component — several files used to keep their own copies of this table, which once caused a Cloudflare build failure when one copy went stale.
 
 ### 5. Bilingual Content (Chinese + English)
 When adding a new blog post, ALWAYS create both Chinese and English versions:

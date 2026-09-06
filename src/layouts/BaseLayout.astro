@@ -9,12 +9,13 @@ interface Props {
   title: string;
   description: string;
   image?: string;
+  type?: 'website' | 'article';
   lang?: 'zh-Hant' | 'en';
   alternateUrl?: string;
   skipGlobalSchema?: boolean;
 }
 
-const { title, description, image, lang = 'zh-Hant', alternateUrl, skipGlobalSchema = false } = Astro.props;
+const { title, description, image, type, lang = 'zh-Hant', alternateUrl, skipGlobalSchema = false } = Astro.props;
 ---
 
 <!doctype html>
@@ -33,7 +34,7 @@ const { title, description, image, lang = 'zh-Hant', alternateUrl, skipGlobalSch
         }
       })();
     </script>
-    <BaseHead title={title} description={description} image={image} lang={lang} alternateUrl={alternateUrl} />
+    <BaseHead title={title} description={description} image={image} type={type} lang={lang} alternateUrl={alternateUrl} />
     {!skipGlobalSchema && (
       <>
         <SchemaJsonLd schema={{ type: 'WebSite', lang }} />

@@ -1,50 +1,10 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
-
-// Tag mapping: display name -> URL slug
-const tagMapping: Record<string, string> = {
-  '生活': 'life',
-  '製作': 'making',
-  '物件': 'obj',
-  '發酵': 'fermentation',
-  '熟成': 'aging',
-  '熟肉': 'charcuterie',
-  '麵包': 'bread',
-  '咖啡': 'coffee',
-  '魚': 'fish',
-  '豬肉': 'pork',
-  '香腸': 'sausage',
-  '食譜': 'recipe',
-  '器具': 'equipment',
-  '台灣': 'taiwan',
-};
-
-// Reverse mapping: URL slug -> display name
-const slugToDisplay: Record<string, string> = {
-  'life': '生活',
-  'making': '製作',
-  'obj': '物件',
-  'fermentation': '發酵',
-  'aging': '熟成',
-  'charcuterie': '熟肉',
-  'bread': '麵包',
-  'coffee': '咖啡',
-  'fish': '魚',
-  'pork': '豬肉',
-  'sausage': '香腸',
-  'recipe': '食譜',
-  'equipment': '器具',
-  'taiwan': '台灣',
-};
+import { getTagSlug, getTagDisplayName } from '../../lib/tags';
 
 // Fixed display order
 const tagOrder = ['life', 'making', 'obj'];
-
-// Get the URL slug for a tag
-function getTagSlug(tag: string): string {
-  return tagMapping[tag] || tag;
-}
 
 const posts = await getCollection('blog', ({ data }) => !data.draft);
 
@@ -61,7 +21,7 @@ const slugCounts = posts.reduce((acc, post) => {
 const sortedTags = Object.entries(slugCounts)
   .map(([slug, count]) => ({
     slug,
-    displayName: slugToDisplay[slug] || slug,
+    displayName: getTagDisplayName(slug, 'zh'),
     count,
   }))
   .sort((a, b) => {

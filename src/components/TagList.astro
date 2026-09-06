@@ -1,4 +1,6 @@
 ---
+import { getTagSlug } from '../lib/tags';
+
 interface Props {
   tags: string[];
   lang?: 'zh-Hant' | 'en';
@@ -6,25 +8,6 @@ interface Props {
 
 const { tags, lang = 'zh-Hant' } = Astro.props;
 
-// Tag mapping: Chinese display name -> URL slug
-const tagToSlug: Record<string, string> = {
-  '生活': 'life',
-  '製作': 'making',
-  '物件': 'obj',
-  '發酵': 'fermentation',
-  '熟成': 'aging',
-  '熟肉': 'charcuterie',
-  '麵包': 'bread',
-  '咖啡': 'coffee',
-  '魚': 'fish',
-  '豬肉': 'pork',
-  '香腸': 'sausage',
-  '食譜': 'recipe',
-  '器具': 'equipment',
-  '台灣': 'taiwan',
-};
-
-const getTagSlug = (tag: string): string => tagToSlug[tag] || tag;
 const basePath = lang === 'en' ? '/en/tags' : '/tags';
 ---
 
