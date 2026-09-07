@@ -25,19 +25,19 @@ const langSwitchLabel = isEnglish ? '中文' : 'EN';
 ---
 
 <header class="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 pt-[env(safe-area-inset-top)]">
-  <nav class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+  <nav class="max-w-4xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
     <a href={homeUrl} class="text-xl font-bold text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
       Saltwind
     </a>
 
-    <div class="flex items-center gap-4">
-      <ul class="flex items-center gap-2 sm:gap-4">
+    <div class="flex flex-wrap items-center gap-x-1.5 gap-y-1.5 sm:gap-x-4">
+      <ul class="flex flex-wrap items-center gap-x-1.5 gap-y-1.5 sm:gap-x-4">
         {navItems.map(({ href, label }) => (
           <li>
             <a
               href={href}
               class:list={[
-                'text-sm font-medium transition-colors px-2 py-1',
+                'text-sm font-medium transition-colors px-1.5 py-1 sm:px-2',
                 currentPath === href || (href !== '/' && href !== '/en/' && currentPath.startsWith(href))
                   ? 'text-primary-600 dark:text-primary-400'
                   : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -50,7 +50,7 @@ const langSwitchLabel = isEnglish ? '中文' : 'EN';
       </ul>
       <a
         href={langSwitchUrl}
-        class="text-sm font-medium px-2 py-1 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
+        class="text-sm font-medium px-1.5 py-1 sm:px-2 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
       >
         {langSwitchLabel}
       </a>

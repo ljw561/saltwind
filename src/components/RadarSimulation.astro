@@ -17,16 +17,59 @@
   </div>
 
   <aside
-    class="order-2 min-w-0 rounded-lg border border-gray-200 p-5 dark:border-gray-800 sm:p-6 md:order-1 md:min-w-[240px] md:flex-none md:basis-[38%]"
+    class="order-2 min-w-0 rounded-lg border border-gray-200 p-5 dark:border-gray-800 sm:p-6 md:order-1 md:min-w-[240px] md:flex-none md:basis-[34%]"
     data-radar-info
   >
+    <div class="mb-5 rounded-lg border border-gray-200 p-4 dark:border-gray-800" data-observer-panel>
+      <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        Observer Location
+      </p>
+      <div class="mt-3 grid grid-cols-2 gap-3">
+        <label class="block">
+          <span class="text-xs text-gray-500 dark:text-gray-400">Latitude</span>
+          <input
+            type="number"
+            step="0.0001"
+            min="-90"
+            max="90"
+            inputmode="decimal"
+            data-observer-lat
+            class="mt-1 w-full rounded border border-gray-300 bg-transparent px-2 py-2.5 text-sm text-gray-900 dark:border-gray-700 dark:text-white"
+          />
+        </label>
+        <label class="block">
+          <span class="text-xs text-gray-500 dark:text-gray-400">Longitude</span>
+          <input
+            type="number"
+            step="0.0001"
+            min="-180"
+            max="180"
+            inputmode="decimal"
+            data-observer-lon
+            class="mt-1 w-full rounded border border-gray-300 bg-transparent px-2 py-2.5 text-sm text-gray-900 dark:border-gray-700 dark:text-white"
+          />
+        </label>
+      </div>
+    </div>
+
     <div data-radar-empty>
       <p class="text-sm font-semibold tracking-wide text-gray-500 dark:text-gray-400">
-        NO AIRCRAFT SELECTED
+        SELECT AN AIRCRAFT
       </p>
       <p class="mt-2 text-sm text-gray-500 dark:text-gray-500">
-        Select a target on the radar to view aircraft information.
+        Click or tap a target on the radar to inspect its flight information.
       </p>
+
+      <dl class="mt-5 space-y-2 border-t border-gray-200 pt-4 text-sm dark:border-gray-800">
+        <div class="flex items-center justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Range</dt>
+          <dd class="font-medium text-gray-900 dark:text-white" data-field="rangeNm"></dd>
+        </div>
+        <div class="flex items-center justify-between">
+          <dt class="text-gray-500 dark:text-gray-400">Aircraft in range</dt>
+          <dd class="font-medium text-gray-900 dark:text-white" data-field="inRangeCount"></dd>
+        </div>
+      </dl>
     </div>
 
     <div data-radar-details class="hidden">
@@ -72,7 +115,7 @@
 <style>
   .radar-panel {
     width: 100%;
-    max-width: 560px;
+    max-width: 680px;
     margin: 0 auto;
     aspect-ratio: 1 / 1;
     padding: 4%;
@@ -96,8 +139,10 @@
   import {
     SimulationAircraftProvider,
     projectFleet,
+    clampObserver,
     DEFAULT_OBSERVER,
     DEFAULT_RANGE_NM,
+    type ObserverState,
     type RadarTarget,
   } from '../lib/radar';
 
@@ -117,7 +162,8 @@
     const AIRCRAFT_COUNT = 10;
     const RADAR_RANGE_NM = DEFAULT_RANGE_NM; // full-scale range mapped to the outer ring
     const DATA_REFRESH_MS = 5000; // data clock: simulated telemetry cadence
-    const HIT_RADIUS_PX = 16; // generous invisible hit area for click/touch
+    const HIT_RADIUS_PX = 16; // generous invisible hit area for mouse/pen
+    const TOUCH_HIT_RADIUS_PX = 24; // touch needs a larger real-world contact area
     const PHOSPHOR = '#39ff8a';
     const SELECTION_COLOR = '#eafff0';
 
@@ -138,8 +184,12 @@
     // is view state and lives alongside it here, not in the data model.
     type RenderAircraft = RadarTarget & { screenX: number; screenY: number; brightness: number };
 
-    const observer = DEFAULT_OBSERVER;
-    const provider = new SimulationAircraftProvider(AIRCRAFT_COUNT, observer, RADAR_RANGE_NM);
+    // Observer location is user-editable UI state. The provider's own origin
+    // below is a one-time simulation seed (where the demo fleet starts out),
+    // not the observer — moving the observer re-centers the radar's
+    // distance/bearing/x-y math, it does not move the aircraft.
+    let observer: ObserverState = { ...DEFAULT_OBSERVER };
+    const provider = new SimulationAircraftProvider(AIRCRAFT_COUNT, DEFAULT_OBSERVER, RADAR_RANGE_NM);
     // projectFleet returns a fresh array every call, so brightness (which
     // must persist and decay across frames) is tracked separately here and
     // re-attached to each frame's freshly projected targets.
@@ -155,8 +205,46 @@
       if (key) fieldEls[key] = el;
     }
 
+    // --- Observer location controls -----------------------------------------
+    const latInput = infoPanel.querySelector<HTMLInputElement>('[data-observer-lat]');
+    const lonInput = infoPanel.querySelector<HTMLInputElement>('[data-observer-lon]');
+
+    function reflectObserverInputs() {
+      if (latInput) latInput.value = String(observer.latitude);
+      if (lonInput) lonInput.value = String(observer.longitude);
+    }
+
+    // Fires on blur / Enter (standard `change` behavior for number inputs),
+    // not on every keystroke, so an in-progress edit is never fought mid-type.
+    function applyObserverInputs() {
+      const latRaw = latInput ? parseFloat(latInput.value) : NaN;
+      const lonRaw = lonInput ? parseFloat(lonInput.value) : NaN;
+      observer = clampObserver({
+        latitude: Number.isFinite(latRaw) ? latRaw : observer.latitude,
+        longitude: Number.isFinite(lonRaw) ? lonRaw : observer.longitude,
+      });
+      // Reflect back so a clamped or invalid value never leaves the field
+      // silently disagreeing with what is actually being used.
+      reflectObserverInputs();
+    }
+
+    reflectObserverInputs();
+    latInput?.addEventListener('change', applyObserverInputs);
+    lonInput?.addEventListener('change', applyObserverInputs);
+
     function findSelected(): RenderAircraft | undefined {
       return selectedId ? fleet.find((ac) => ac.id === selectedId) : undefined;
+    }
+
+    // Empty-state secondary hint: real numbers pulled from the current
+    // fleet/observer state (not fabricated telemetry) — just enough context
+    // to make the empty panel feel purposeful instead of blank.
+    function updateEmptyStats() {
+      if (fieldEls.rangeNm) fieldEls.rangeNm.textContent = `${RADAR_RANGE_NM} nm`;
+      if (fieldEls.inRangeCount) {
+        const inRange = fleet.filter((ac) => ac.distance <= RADAR_RANGE_NM).length;
+        fieldEls.inRangeCount.textContent = `${inRange} / ${fleet.length}`;
+      }
     }
 
     function formatFreshness(ac: RadarTarget): string {
@@ -221,6 +309,7 @@
     }
 
     function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2); // re-read: DPR can change (e.g. window dragged to another monitor)
       const rect = canvas.getBoundingClientRect();
       size = Math.max(1, Math.round(rect.width));
       canvas.width = size * dpr;
@@ -297,6 +386,31 @@
       ctx.shadowBlur = 0;
     }
 
+    // Boundary-aware label placement: default to the right of the dot, but
+    // flip to the left when there isn't room, and clamp vertically near the
+    // top/bottom edge — so a target near the canvas rim never gets its
+    // callsign clipped. Not full collision avoidance, just edge handling.
+    function drawTargetLabel(text: string, x: number, y: number, dotRadius: number, color: string) {
+      const margin = 4;
+      const edgePad = 4;
+      // Recomputed from the live `size` every call (mirrors the ctx.font the
+      // caller just set) rather than cached, since `size` changes on resize.
+      const halfLine = Math.max(10, size * 0.026) * 0.4;
+      const estWidth = ctx.measureText(text).width;
+
+      const fitsRight = x + dotRadius + margin + estWidth <= size - edgePad;
+      ctx.textAlign = fitsRight ? 'left' : 'right';
+      const tx = fitsRight ? x + dotRadius + margin : x - dotRadius - margin;
+
+      let ty = y;
+      if (ty - halfLine < edgePad) ty = edgePad + halfLine;
+      else if (ty + halfLine > size - edgePad) ty = size - edgePad - halfLine;
+
+      ctx.fillStyle = color;
+      ctx.fillText(text, tx, ty);
+      ctx.textAlign = 'left'; // restore the function's default for the next caller
+    }
+
     function drawTargets() {
       const scale = maxRadius / RADAR_RANGE_NM;
       ctx.textAlign = 'left';
@@ -307,11 +421,15 @@
         ac.screenX = center + ac.x * scale;
         ac.screenY = center - ac.y * scale;
 
-        const isSelected = ac.id === selectedId;
+        // The selected target is drawn later, as its own full-strength
+        // overlay on top of the sweep (see drawSelection) — skip it here so
+        // it never renders as a dim, sweep-affected "shadow" underneath.
+        if (ac.id === selectedId) continue;
+
         const baseAlpha = 0.45 + ac.brightness * 0.55;
         const dotRadius = 2 + ac.brightness * 1.6;
 
-        if (ac.brightness > 0.05 || isSelected) {
+        if (ac.brightness > 0.05) {
           ctx.shadowColor = PHOSPHOR;
           ctx.shadowBlur = 4 + ac.brightness * 6;
         }
@@ -321,21 +439,35 @@
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // Only label the selected target and whatever the sweep just lit up —
-        // showing every callsign at once would bury the display in text.
-        if (isSelected || ac.brightness > 0.5) {
-          ctx.fillStyle = isSelected ? SELECTION_COLOR : 'rgba(57, 255, 138, 0.85)';
-          ctx.fillText(ac.callsign, ac.screenX + dotRadius + 4, ac.screenY);
+        // Only label whatever the sweep just lit up — showing every
+        // callsign at once would bury the display in text.
+        if (ac.brightness > 0.5) {
+          drawTargetLabel(ac.callsign, ac.screenX, ac.screenY, dotRadius, 'rgba(57, 255, 138, 0.85)');
         }
       }
     }
 
-    // Selection marker: an explicit corner-bracket box, drawn fresh every
-    // frame at full strength. It is intentionally independent of `brightness`
-    // (sweep illumination) so it stays visible long after the sweep moves on.
+    // The full selected-target overlay: dot, callsign, and corner-bracket
+    // box. Drawn last in the frame — after drawSweep() — and always at full
+    // strength, independent of `brightness` (sweep illumination/decay), so
+    // the selected state is never dimmer or harder to read than the sweep
+    // that just passed over it, and never fades as phosphor persistence does.
     function drawSelection() {
       const ac = findSelected();
       if (!ac) return;
+
+      const dotRadius = 3.6;
+      ctx.shadowColor = SELECTION_COLOR;
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = SELECTION_COLOR;
+      ctx.beginPath();
+      ctx.arc(ac.screenX, ac.screenY, dotRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.textBaseline = 'middle';
+      ctx.font = `${Math.max(10, size * 0.026)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+      drawTargetLabel(ac.callsign, ac.screenX, ac.screenY, dotRadius, SELECTION_COLOR);
 
       const half = 9;
       const arm = 4;
@@ -381,6 +513,7 @@
         screenY: 0,
         brightness: brightnessById.get(target.id) ?? 0,
       }));
+      if (!selectedId) updateEmptyStats();
 
       // Never a hard clear — a translucent overlay lets old strokes decay
       // gradually, which is what produces the phosphor persistence trail.
@@ -406,12 +539,25 @@
 
     // --- Pointer selection ------------------------------------------------------
     function onPointerDown(event: PointerEvent) {
+      // Canvas internal resolution (canvas.width/height, scaled by dpr) and
+      // our drawing coordinate space (CSS pixels 0..size, via the
+      // ctx.setTransform(dpr, ...) in resize()) are two different things —
+      // ac.screenX/Y live in the latter. getBoundingClientRect() gives the
+      // actual on-screen box in CSS pixels, which is the same space clientX/
+      // clientY are reported in, so px/py land in the same space as
+      // ac.screenX/Y too. We still scale by size/rect.width|height (rather
+      // than assuming rect === size 1:1) so a sub-pixel rounding gap between
+      // the cached `size` and the live rendered rect (responsive layout,
+      // fractional CSS widths) can never throw hit-testing off.
       const rect = canvas.getBoundingClientRect();
-      const px = event.clientX - rect.left;
-      const py = event.clientY - rect.top;
+      const scaleX = rect.width > 0 ? size / rect.width : 1;
+      const scaleY = rect.height > 0 ? size / rect.height : 1;
+      const px = (event.clientX - rect.left) * scaleX;
+      const py = (event.clientY - rect.top) * scaleY;
 
+      const hitRadius = event.pointerType === 'touch' ? TOUCH_HIT_RADIUS_PX : HIT_RADIUS_PX;
       let hit: RenderAircraft | null = null;
-      let bestDist = HIT_RADIUS_PX;
+      let bestDist = hitRadius;
       for (const ac of fleet) {
         const d = Math.hypot(px - ac.screenX, py - ac.screenY);
         if (d <= bestDist) {
@@ -428,7 +574,10 @@
 
     // --- Data clock (independent of rendering) ----------------------------------
     dataIntervalId = window.setInterval(() => {
-      provider.refresh(Date.now());
+      // refresh() may be async for a future network-backed provider; wrapping
+      // in Promise.resolve() handles both sync (today) and async without
+      // an unhandled rejection either way.
+      Promise.resolve(provider.refresh(Date.now())).catch(() => {});
       if (selectedId) renderInfoPanel();
     }, DATA_REFRESH_MS);
 
@@ -449,6 +598,8 @@
       clearInterval(dataIntervalId);
       stopAgeTicker();
       canvas.removeEventListener('pointerdown', onPointerDown);
+      latInput?.removeEventListener('change', applyObserverInputs);
+      lonInput?.removeEventListener('change', applyObserverInputs);
     }
 
     // Full page navigations (this site has no client router) still benefit
