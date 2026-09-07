@@ -4,23 +4,146 @@
 // targets, plus a click/tap-to-select aircraft info panel.
 ---
 
-<div class="flex flex-col gap-6 md:flex-row md:items-start">
+<div class="flex flex-col gap-6 md:flex-row md:items-stretch">
   <div class="order-1 min-w-0 md:order-2 md:flex-1">
+    <!-- ONE visual panel. The circle is sized entirely on its own (fixed
+         aspect-ratio square, independent of any sibling) — the slider and
+         readout never compete with it for width. On mobile they sit below
+         it in normal flow (still the same panel); from md up they become
+         an overlay positioned inside this panel's own margin (see
+         .radar-range-overlay / .radar-range-readout), never a second box. -->
     <div class="radar-panel">
-      <canvas
-        class="radar-canvas"
-        data-radar-canvas
-        role="img"
-        aria-label="Simulated radar display with a rotating sweep and selectable aircraft targets"
-      ></canvas>
+      <div class="radar-circle-frame">
+        <canvas
+          class="radar-canvas"
+          data-radar-canvas
+          role="img"
+          aria-label="Simulated radar display with a rotating sweep and selectable aircraft targets"
+        ></canvas>
+      </div>
+
+      <div class="radar-range-overlay">
+        <span class="radar-range-endlabel radar-range-min">5</span>
+        <input
+          type="range"
+          min="5"
+          max="100"
+          step="5"
+          value="40"
+          data-range-slider
+          aria-label="Radar range"
+          class="range-slider"
+        />
+        <span class="radar-range-endlabel radar-range-max">100</span>
+      </div>
+
+      <p class="radar-range-readout">
+        RANGE <span class="tabular-nums" data-range-value>040</span> KM
+      </p>
     </div>
   </div>
 
   <aside
-    class="order-2 min-w-0 rounded-lg border border-gray-200 p-5 dark:border-gray-800 sm:p-6 md:order-1 md:min-w-[240px] md:flex-none md:basis-[34%]"
+    class="order-2 min-w-0 rounded-lg border border-gray-200 p-5 dark:border-gray-800 sm:p-6 md:order-1 md:flex md:min-w-[240px] md:flex-none md:basis-[34%] md:flex-col"
     data-radar-info
   >
-    <div class="mb-5 rounded-lg border border-gray-200 p-4 dark:border-gray-800" data-observer-panel>
+    <!-- Content area: grows to fill whatever height the radar column's
+         aspect-ratio establishes for the row (see md:items-stretch on the
+         parent), so the empty/details panel below can spread its own
+         top/middle/bottom groups across the full height instead of
+         clumping at the top. -->
+    <div class="md:flex md:min-h-0 md:flex-1 md:flex-col">
+      <!-- Note: the flex/height layout classes live on an INNER wrapper, not
+           on data-radar-empty/data-radar-details themselves — those two are
+           the elements JS toggles `hidden` on, and Tailwind's `hidden`
+           (display:none) can lose to a `md:flex` on the very same element at
+           md+ widths (equal specificity, later media-query rule wins in the
+           cascade), which would leave a "hidden" panel still visible. -->
+      <div data-radar-empty class="md:h-full">
+        <div class="md:flex md:h-full md:flex-col md:justify-between">
+          <div>
+            <p class="text-sm font-semibold tracking-wide text-gray-500 dark:text-gray-400">
+              SELECT AN AIRCRAFT
+            </p>
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-500">
+              Click or tap a target on the radar to inspect its flight information.
+            </p>
+          </div>
+
+          <!-- Intentional whitespace above this on desktop (via justify-between)
+               — the empty state isn't unfinished, it's just waiting. -->
+          <dl class="mt-8 space-y-2 border-t border-gray-200 pt-5 text-sm dark:border-gray-800 md:mt-0">
+            <div class="flex items-center justify-between">
+              <dt class="text-gray-500 dark:text-gray-400">Aircraft in range</dt>
+              <dd class="font-medium text-gray-900 dark:text-white" data-field="inRangeCount"></dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+
+      <div data-radar-details class="hidden md:h-full">
+        <div class="md:flex md:h-full md:flex-col md:justify-between">
+        <!-- Top: identity -->
+        <div>
+          <p class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white md:text-4xl" data-field="callsign"></p>
+          <p class="mt-1 hidden text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400" data-field="outOfRange">
+            Out of range
+          </p>
+          <p class="mt-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 md:text-base" data-field="airline"></p>
+          <p class="text-xs text-gray-400 dark:text-gray-500 md:text-sm" data-field="registration"></p>
+        </div>
+
+        <!-- Upper-middle / middle: altitude is the hero number, then the
+             paired stats, then bearing — spacing + size carry the
+             hierarchy, one divider marks where the data section begins. -->
+        <div class="mt-6 border-t border-gray-200 pt-6 dark:border-gray-800 md:mt-0">
+          <div>
+            <p class="text-3xl font-bold tabular-nums text-gray-900 dark:text-white md:text-5xl">
+              <span data-field="altitude"></span><span class="ml-1 text-base font-semibold text-gray-400 dark:text-gray-500 md:text-xl">ft</span>
+            </p>
+            <p class="mt-1 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Altitude</p>
+          </div>
+
+          <div class="mt-6 grid grid-cols-2 gap-x-4 gap-y-6">
+            <div>
+              <p class="text-xl font-bold tabular-nums text-gray-900 dark:text-white md:text-3xl">
+                <span data-field="groundSpeed"></span><span class="ml-1 text-xs font-semibold text-gray-400 dark:text-gray-500 md:text-sm">kt</span>
+              </p>
+              <p class="mt-0.5 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Ground Speed</p>
+            </div>
+            <div>
+              <p class="text-xl font-bold tabular-nums text-gray-900 dark:text-white md:text-3xl" data-field="heading"></p>
+              <p class="mt-0.5 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Heading</p>
+            </div>
+            <div>
+              <p class="text-xl font-bold tabular-nums text-gray-900 dark:text-white md:text-3xl">
+                <span data-field="verticalRate"></span><span class="ml-1 text-xs font-semibold text-gray-400 dark:text-gray-500 md:text-sm">ft/min</span>
+              </p>
+              <p class="mt-0.5 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Vertical Rate</p>
+            </div>
+            <div>
+              <p class="text-xl font-bold tabular-nums text-gray-900 dark:text-white md:text-3xl">
+                <span data-field="distance"></span><span class="ml-1 text-xs font-semibold text-gray-400 dark:text-gray-500 md:text-sm">km</span>
+              </p>
+              <p class="mt-0.5 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Distance</p>
+            </div>
+          </div>
+
+          <div class="mt-6">
+            <p class="text-xl font-bold tabular-nums text-gray-900 dark:text-white md:text-3xl" data-field="bearing"></p>
+            <p class="mt-0.5 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Bearing</p>
+          </div>
+        </div>
+
+        <!-- Bottom: freshness — stays small, doesn't compete for attention. -->
+        <p class="mt-6 text-xs text-gray-500 dark:text-gray-500 md:mt-0" data-field="freshness"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Observer Location always anchors the panel bottom (both empty and
+         selected states share it), set apart by a single divider. -->
+    <div class="mt-8 border-t border-gray-200 pt-5 dark:border-gray-800 md:mt-6" data-observer-panel>
       <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
         Observer Location
       </p>
@@ -51,78 +174,35 @@
         </label>
       </div>
     </div>
-
-    <div data-radar-empty>
-      <p class="text-sm font-semibold tracking-wide text-gray-500 dark:text-gray-400">
-        SELECT AN AIRCRAFT
-      </p>
-      <p class="mt-2 text-sm text-gray-500 dark:text-gray-500">
-        Click or tap a target on the radar to inspect its flight information.
-      </p>
-
-      <dl class="mt-5 space-y-2 border-t border-gray-200 pt-4 text-sm dark:border-gray-800">
-        <div class="flex items-center justify-between">
-          <dt class="text-gray-500 dark:text-gray-400">Range</dt>
-          <dd class="font-medium text-gray-900 dark:text-white" data-field="rangeNm"></dd>
-        </div>
-        <div class="flex items-center justify-between">
-          <dt class="text-gray-500 dark:text-gray-400">Aircraft in range</dt>
-          <dd class="font-medium text-gray-900 dark:text-white" data-field="inRangeCount"></dd>
-        </div>
-      </dl>
-    </div>
-
-    <div data-radar-details class="hidden">
-      <div class="mb-4">
-        <p class="text-2xl font-bold text-gray-900 dark:text-white" data-field="callsign"></p>
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          <span data-field="airline"></span> &middot; <span data-field="registration"></span>
-        </p>
-      </div>
-
-      <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
-        <div>
-          <dt class="text-gray-500 dark:text-gray-400">Altitude</dt>
-          <dd class="font-medium text-gray-900 dark:text-white" data-field="altitude"></dd>
-        </div>
-        <div>
-          <dt class="text-gray-500 dark:text-gray-400">Ground Speed</dt>
-          <dd class="font-medium text-gray-900 dark:text-white" data-field="groundSpeed"></dd>
-        </div>
-        <div>
-          <dt class="text-gray-500 dark:text-gray-400">Heading</dt>
-          <dd class="font-medium text-gray-900 dark:text-white" data-field="heading"></dd>
-        </div>
-        <div>
-          <dt class="text-gray-500 dark:text-gray-400">Vertical Rate</dt>
-          <dd class="font-medium text-gray-900 dark:text-white" data-field="verticalRate"></dd>
-        </div>
-        <div>
-          <dt class="text-gray-500 dark:text-gray-400">Distance</dt>
-          <dd class="font-medium text-gray-900 dark:text-white" data-field="distance"></dd>
-        </div>
-        <div>
-          <dt class="text-gray-500 dark:text-gray-400">Bearing</dt>
-          <dd class="font-medium text-gray-900 dark:text-white" data-field="bearing"></dd>
-        </div>
-      </dl>
-
-      <p class="mt-4 text-xs text-gray-500 dark:text-gray-500" data-field="freshness"></p>
-    </div>
   </aside>
 </div>
 
 <style>
+  /* ONE panel, unconditionally. No aspect-ratio here — height is always
+     content-driven (circle + whatever sits below it), and on mobile that
+     content includes the slider row + readout in normal flow; from md up
+     those same elements switch to position:absolute (see below), so at
+     that point the panel's content is just the circle again and its
+     height tracks the circle exactly, with the slider/readout floating in
+     the panel's own right/bottom margin instead of adding a row. */
   .radar-panel {
+    position: relative;
     width: 100%;
     max-width: 680px;
     margin: 0 auto;
-    aspect-ratio: 1 / 1;
     padding: 4%;
     border-radius: 1rem;
     background: #050c08;
     border: 1px solid #1a2b20;
     box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6);
+  }
+
+  /* The one thing that must always be square. Sized on its own — it has no
+     idea the slider overlay exists, so it's never squeezed by it. */
+  .radar-circle-frame {
+    width: 100%;
+    max-width: 680px;
+    aspect-ratio: 1 / 1;
   }
 
   .radar-canvas {
@@ -133,23 +213,147 @@
     cursor: pointer;
     touch-action: manipulation;
   }
+
+  /* Mobile: a normal in-flow row below the circle, still inside
+     .radar-panel. Left-to-right DOM order (5, slider, 100) already reads
+     correctly here, so no reordering needed until md. */
+  .radar-range-overlay {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  /* Readout + end-labels: same phosphor voice as the canvas itself
+     (monospace, green, restrained) — instrument readout, not a page-level
+     form label. Colors are fixed regardless of site light/dark theme,
+     same as the canvas, since this panel's background is always black. */
+  .radar-range-readout {
+    margin-top: 8px;
+    text-align: center;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: rgba(57, 255, 138, 0.75);
+    text-shadow: 0 0 6px rgba(57, 255, 138, 0.25);
+  }
+
+  .radar-range-endlabel {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.62rem;
+    color: rgba(57, 255, 138, 0.4);
+  }
+
+  /* Range slider: dark/translucent green track, bright phosphor thumb —
+     part of the radar instrument, not a browser-default or page-level form
+     control. Still a real <input type="range"> throughout. */
+  .range-slider {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    height: 3px;
+    border-radius: 9999px;
+    background: rgba(57, 255, 138, 0.18);
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .range-slider::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 9999px;
+    background: #39ff8a;
+    box-shadow: 0 0 6px rgba(57, 255, 138, 0.8);
+    cursor: pointer;
+  }
+  .range-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 9999px;
+    background: #39ff8a;
+    border: none;
+    box-shadow: 0 0 6px rgba(57, 255, 138, 0.8);
+    cursor: pointer;
+  }
+  .range-slider::-moz-range-track {
+    height: 3px;
+    border-radius: 9999px;
+    background: rgba(57, 255, 138, 0.18);
+  }
+  .range-slider:focus-visible {
+    outline: 2px solid rgba(57, 255, 138, 0.5);
+    outline-offset: 2px;
+  }
+
+  /* From md up: the slider + readout stop taking layout space and become
+     overlays inside the SAME panel — positioned in the panel's own right/
+     bottom margin (reserved via padding-right below), never a second box
+     and never competing with .radar-circle-frame for width. */
+  @media (min-width: 768px) {
+    .radar-panel {
+      max-width: 716px;
+      padding: 3.5% 26px 3.5% 3.5%;
+    }
+
+    .radar-range-overlay {
+      position: absolute;
+      top: 9%;
+      bottom: 9%;
+      right: 5px;
+      margin-top: 0;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 4px;
+    }
+    .radar-range-max {
+      order: 1;
+    }
+    .range-slider {
+      order: 2;
+      writing-mode: vertical-lr;
+      direction: rtl;
+      width: 3px;
+      flex: 1 1 auto;
+    }
+    .radar-range-min {
+      order: 3;
+    }
+
+    .radar-range-readout {
+      position: absolute;
+      left: 3.5%;
+      right: 26px;
+      bottom: 8px;
+      margin-top: 0;
+    }
+  }
 </style>
 
 <script>
   import {
-    SimulationAircraftProvider,
     projectFleet,
+    normalizeAircraftResponse,
     clampObserver,
+    haversineDistanceNm,
     DEFAULT_OBSERVER,
-    DEFAULT_RANGE_NM,
     type ObserverState,
+    type AircraftSnapshot,
     type RadarTarget,
   } from '../lib/radar';
 
   // Everything is scoped to this module so re-including the component (or a
   // future client-side router re-running the script) can't stack up extra
   // animation loops or timers.
-  function initRadar(canvas: HTMLCanvasElement, infoPanel: HTMLElement) {
+  function initRadar(
+    canvas: HTMLCanvasElement,
+    infoPanel: HTMLElement,
+    rangeSlider: HTMLInputElement,
+    rangeValueEl: HTMLElement
+  ) {
     if (canvas.dataset.radarBound === 'true') return;
     canvas.dataset.radarBound = 'true';
 
@@ -159,13 +363,26 @@
     const RING_COUNT = 4;
     const SWEEP_PERIOD_MS = 5000; // sweep clock: one full rotation
     const SWEEP_WIDTH_RAD = (7 * Math.PI) / 180;
-    const AIRCRAFT_COUNT = 10;
-    const RADAR_RANGE_NM = DEFAULT_RANGE_NM; // full-scale range mapped to the outer ring
-    const DATA_REFRESH_MS = 5000; // data clock: simulated telemetry cadence
-    const HIT_RADIUS_PX = 16; // generous invisible hit area for mouse/pen
-    const TOUCH_HIT_RADIUS_PX = 24; // touch needs a larger real-world contact area
+    // How long a swept target's phosphor trail (silhouette + callsign, which
+    // share this same brightness) takes to fade from lit to gone. Expressed
+    // directly in ms rather than a per-frame decay-rate constant.
+    const TARGET_FADE_MS = 3500;
+    // Real ADS-B data clock — matches the verified M5Dial NetworkSource
+    // refresh cadence (opendata.adsb.fi via /api/aircraft), independent of
+    // the render clock (rAF) and the sweep clock (SWEEP_PERIOD_MS) above.
+    const DATA_REFRESH_MS = 15000;
+    // Safety cap: /api/aircraft's upstream query radius (55 NM, fixed
+    // server-side — see functions/api/aircraft.ts) can plausibly return more
+    // aircraft than is worth holding onto. Only trims anything if the fetch
+    // actually exceeds this; nearest-to-observer are kept.
+    const MAX_AIRCRAFT = 300;
+    const HIT_RADIUS_PX = 20; // >= the largest normal symbol's own radius (18px), generous for mouse/pen
+    const TOUCH_HIT_RADIUS_PX = 30; // touch needs a larger real-world contact area
     const PHOSPHOR = '#39ff8a';
     const SELECTION_COLOR = '#eafff0';
+    const MIN_RANGE_KM = 5;
+    const MAX_RANGE_KM = 100;
+    const DEFAULT_RANGE_KM = 40;
 
     let dpr = Math.min(window.devicePixelRatio || 1, 2);
     let size = 0; // CSS pixel size of the (square) canvas
@@ -178,18 +395,29 @@
     let ageIntervalId = 0;
     let destroyed = false;
     let selectedId: string | null = null;
+    // Runtime UI state: how far out the radar screen currently shows. Purely
+    // a display/projection concern — it rescales the projection and filters
+    // what's drawn/hit-testable, but never touches the provider, the
+    // observer, or any aircraft's real lat/lon.
+    let radarRangeKm = DEFAULT_RANGE_KM;
 
     // The shared RadarTarget model stays exactly what the projection pipeline
     // produces. Render-only bookkeeping (screen position, sweep brightness)
     // is view state and lives alongside it here, not in the data model.
     type RenderAircraft = RadarTarget & { screenX: number; screenY: number; brightness: number };
 
-    // Observer location is user-editable UI state. The provider's own origin
-    // below is a one-time simulation seed (where the demo fleet starts out),
-    // not the observer — moving the observer re-centers the radar's
-    // distance/bearing/x-y math, it does not move the aircraft.
+    // Observer location is user-editable UI state — moving it re-centers the
+    // radar's distance/bearing/x-y math; it does not move any aircraft (see
+    // fetchAircraftData below, which re-queries /api/aircraft around
+    // whatever observer is current at fetch time).
     let observer: ObserverState = { ...DEFAULT_OBSERVER };
-    const provider = new SimulationAircraftProvider(AIRCRAFT_COUNT, DEFAULT_OBSERVER, RADAR_RANGE_NM);
+    // The latest successfully-fetched real snapshot. Deliberately never
+    // reset to [] on a failed fetch — see fetchAircraftData: a bad/failed
+    // refresh just leaves this (and everything drawn from it) exactly as it
+    // was, the radar keeps sweeping over stale-but-real data rather than
+    // aircraft vanishing.
+    let latestSnapshot: AircraftSnapshot[] = [];
+    let fetchInFlight = false;
     // projectFleet returns a fresh array every call, so brightness (which
     // must persist and decay across frames) is tracked separately here and
     // re-attached to each frame's freshly projected targets.
@@ -226,24 +454,92 @@
       // Reflect back so a clamped or invalid value never leaves the field
       // silently disagreeing with what is actually being used.
       reflectObserverInputs();
+      // This only fires on 'change' (blur/Enter), not per keystroke, so it's
+      // already naturally debounced to at most one extra fetch per edit —
+      // no separate setTimeout debounce needed. Fire-and-forget: errors are
+      // handled (and logged) inside fetchAircraftData itself.
+      void fetchAircraftData();
     }
 
     reflectObserverInputs();
     latInput?.addEventListener('change', applyObserverInputs);
     lonInput?.addEventListener('change', applyObserverInputs);
 
+    // --- Real aircraft data (data clock) ---------------------------------------
+    // Fetches /api/aircraft (same-origin Cloudflare Pages Function proxying
+    // opendata.adsb.fi — see functions/api/aircraft.ts) using whatever
+    // observer is current *at fetch time*, normalizes the response, and
+    // replaces latestSnapshot. On any failure this deliberately does nothing
+    // to latestSnapshot — the last successful fetch just keeps being drawn,
+    // getting staler (formatFreshness/the OUT OF RANGE-style "· stale" flag
+    // already handles that), and the render/sweep loop never stops or
+    // crashes because of it.
+    async function fetchAircraftData() {
+      if (fetchInFlight) return; // don't let an observer-change refresh race the interval tick
+      fetchInFlight = true;
+      try {
+        const url = `/api/aircraft?lat=${encodeURIComponent(observer.latitude)}&lon=${encodeURIComponent(observer.longitude)}`;
+        const response = await fetch(url);
+        if (!response.ok) {
+          console.warn('radar: /api/aircraft returned', response.status);
+          return;
+        }
+
+        const data: unknown = await response.json();
+        const normalized = normalizeAircraftResponse(data, Date.now());
+
+        // Safety cap — not a data filter (radarRangeKm filtering still
+        // happens every render frame against the full kept set): just a
+        // sane upper bound on how many aircraft this tab holds onto at
+        // once, keeping the ones nearest the observer used for this fetch.
+        if (normalized.length > MAX_AIRCRAFT) {
+          normalized.sort((a, b) => haversineDistanceNm(observer, a) - haversineDistanceNm(observer, b));
+          normalized.length = MAX_AIRCRAFT;
+        }
+
+        if (destroyed) return;
+        latestSnapshot = normalized;
+        if (selectedId) renderInfoPanel();
+      } catch (err) {
+        // Network error, timeout, malformed JSON, etc.
+        console.warn('radar: aircraft fetch failed', err);
+      } finally {
+        fetchInFlight = false;
+      }
+    }
+
+    // --- Radar range control --------------------------------------------------
+    // 'input' (not 'change'): a range slider is a drag gesture, unlike the
+    // lat/lon number fields — live feedback while dragging is the expected
+    // UX here, so radarRangeKm updates continuously, no page reload involved.
+    rangeSlider.value = String(radarRangeKm);
+    rangeValueEl.textContent = String(radarRangeKm).padStart(3, '0');
+
+    function applyRangeInput() {
+      const raw = parseInt(rangeSlider.value, 10);
+      if (Number.isFinite(raw)) {
+        radarRangeKm = Math.min(MAX_RANGE_KM, Math.max(MIN_RANGE_KM, raw));
+      }
+      rangeValueEl.textContent = String(radarRangeKm).padStart(3, '0');
+      // Dragging the slider can immediately push the selected aircraft in
+      // or out of range — refresh its OUT OF RANGE flag right away rather
+      // than waiting for the next data-clock tick.
+      if (selectedId) renderInfoPanel();
+    }
+
+    rangeSlider.addEventListener('input', applyRangeInput);
+
     function findSelected(): RenderAircraft | undefined {
       return selectedId ? fleet.find((ac) => ac.id === selectedId) : undefined;
     }
 
     // Empty-state secondary hint: real numbers pulled from the current
-    // fleet/observer state (not fabricated telemetry) — just enough context
-    // to make the empty panel feel purposeful instead of blank.
+    // fleet/observer/range state (not fabricated telemetry) — just enough
+    // context to make the empty panel feel purposeful instead of blank.
     function updateEmptyStats() {
-      if (fieldEls.rangeNm) fieldEls.rangeNm.textContent = `${RADAR_RANGE_NM} nm`;
       if (fieldEls.inRangeCount) {
-        const inRange = fleet.filter((ac) => ac.distance <= RADAR_RANGE_NM).length;
-        fieldEls.inRangeCount.textContent = `${inRange} / ${fleet.length}`;
+        const inRange = fleet.filter((ac) => ac.distance <= radarRangeKm).length;
+        fieldEls.inRangeCount.textContent = `${inRange}`;
       }
     }
 
@@ -260,18 +556,41 @@
       stopAgeTicker();
       if (!ac) return;
 
+      // Range is a display filter, not a data filter — a selected aircraft
+      // that has fallen outside the current radar range keeps its data
+      // available here (and keeps selectedId), it just isn't drawn on the
+      // canvas (see drawSelection) and gets flagged instead of hidden.
+      fieldEls.outOfRange?.classList.toggle('hidden', ac.distance <= radarRangeKm);
+
+      // Units live as static markup next to these fields now (see the
+      // template), so the JS side only ever writes the value itself —
+      // same underlying numbers, just presentational formatting. Real ADS-B
+      // data can genuinely be missing any of these (see normalizeAdsbAircraft
+      // in radar.ts) — undefined always renders as "—", never "undefined"/
+      // "NaN"/blank.
       if (fieldEls.callsign) fieldEls.callsign.textContent = ac.callsign;
-      if (fieldEls.airline) fieldEls.airline.textContent = ac.airline;
-      if (fieldEls.registration) fieldEls.registration.textContent = ac.registration;
-      if (fieldEls.altitude) fieldEls.altitude.textContent = `${ac.altitude.toLocaleString()} ft`;
-      if (fieldEls.groundSpeed) fieldEls.groundSpeed.textContent = `${Math.round(ac.groundSpeed)} kt`;
-      if (fieldEls.heading) fieldEls.heading.textContent = `${Math.round(ac.heading)}°`;
-      if (fieldEls.verticalRate) {
-        const vr = Math.round(ac.verticalRate);
-        fieldEls.verticalRate.textContent = `${vr > 0 ? '+' : ''}${vr} fpm`;
+      if (fieldEls.airline) fieldEls.airline.textContent = ac.airline ?? '—';
+      if (fieldEls.registration) fieldEls.registration.textContent = ac.registration ?? '—';
+      if (fieldEls.altitude) {
+        fieldEls.altitude.textContent = ac.altitude !== undefined ? ac.altitude.toLocaleString() : '—';
       }
-      if (fieldEls.distance) fieldEls.distance.textContent = `${ac.distance.toFixed(1)} nm`;
-      if (fieldEls.bearing) fieldEls.bearing.textContent = `${Math.round(ac.bearing)}°`;
+      if (fieldEls.groundSpeed) {
+        fieldEls.groundSpeed.textContent = ac.groundSpeed !== undefined ? `${Math.round(ac.groundSpeed)}` : '—';
+      }
+      if (fieldEls.heading) {
+        fieldEls.heading.textContent =
+          ac.heading !== undefined ? `${String(Math.round(ac.heading)).padStart(3, '0')}°` : '—';
+      }
+      if (fieldEls.verticalRate) {
+        if (ac.verticalRate !== undefined) {
+          const vr = Math.round(ac.verticalRate);
+          fieldEls.verticalRate.textContent = `${vr > 0 ? '+' : ''}${vr}`;
+        } else {
+          fieldEls.verticalRate.textContent = '—';
+        }
+      }
+      if (fieldEls.distance) fieldEls.distance.textContent = ac.distance.toFixed(1);
+      if (fieldEls.bearing) fieldEls.bearing.textContent = `${String(Math.round(ac.bearing)).padStart(3, '0')}°`;
       if (fieldEls.freshness) fieldEls.freshness.textContent = formatFreshness(ac);
 
       startAgeTicker();
@@ -306,6 +625,10 @@
         x: center + radius * Math.sin(compassAngle),
         y: center - radius * Math.cos(compassAngle),
       };
+    }
+
+    function toRad(deg: number) {
+      return (deg * Math.PI) / 180;
     }
 
     function resize() {
@@ -346,16 +669,34 @@
       ctx.lineTo(center, center + maxRadius);
       ctx.stroke();
 
-      // Bearing labels.
+      // Ring distance labels — very faint, stacked along the north radial
+      // only (not every ring on every side) so they read as a quiet scale
+      // reference instead of cluttering the display. Only the outermost
+      // ring spells out the unit; RADAR_RANGE_KM below is the value of
+      // record for "how far does the outer ring reach".
+      ctx.font = `${Math.max(9, size * 0.02)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+      ctx.fillStyle = 'rgba(57, 255, 138, 0.28)';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      for (let i = 1; i <= RING_COUNT; i++) {
+        const r = (maxRadius * i) / RING_COUNT;
+        const ringKm = Math.round((radarRangeKm * i) / RING_COUNT);
+        const label = i === RING_COUNT ? `${ringKm} km` : `${ringKm}`;
+        ctx.fillText(label, center + 5, center - r);
+      }
+
+      // Cardinal direction labels. Internal bearing math is untouched (0=N,
+      // 90=E, 180=S, 270=W, clockwise) — this only swaps the printed glyph,
+      // and stays deliberately muted so it never competes with targets.
       ctx.font = `${Math.max(10, size * 0.032)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
-      ctx.fillStyle = 'rgba(57, 255, 138, 0.6)';
+      ctx.fillStyle = 'rgba(57, 255, 138, 0.55)';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const labelR = maxRadius + size * 0.06;
-      ctx.fillText('0°', center, center - labelR + size * 0.03);
-      ctx.fillText('90°', center + labelR, center);
-      ctx.fillText('180°', center, center + labelR - size * 0.03);
-      ctx.fillText('270°', center - labelR, center);
+      ctx.fillText('N', center, center - labelR + size * 0.03);
+      ctx.fillText('E', center + labelR, center);
+      ctx.fillText('S', center, center + labelR - size * 0.03);
+      ctx.fillText('W', center - labelR, center);
     }
 
     function drawSweep() {
@@ -411,8 +752,47 @@
       ctx.textAlign = 'left'; // restore the function's default for the next caller
     }
 
+    // Solid top-down commercial-airliner silhouette — pointed nose, tapered
+    // fuselage, swept main wings, small tailplane, tapered tail — traced as
+    // ONE closed path and filled (not a stroked line diagram), so it reads
+    // as "a plane" at a glance even at tiny sizes. Local coordinates, nose
+    // pointing "up" (-Y). ctx.rotate(a) already rotates a point at (0,-1) to
+    // (sin(a), -cos(a)) — the exact same clockwise, 0=up compass convention
+    // polarToXY() uses — so rotating by the aircraft's heading (in degrees,
+    // same 0=N/90=E/180=S/270=W convention) points the nose the right way
+    // with no axis flips (verified against actual selected-target
+    // screenshots at headings near 0/90/180/270 while building this).
+    // Caller translates/rotates to the aircraft's position + heading and
+    // sets fillStyle (and optionally shadowColor/shadowBlur for a faint
+    // glow) before calling this.
+    function traceAircraftPath(r: number) {
+      ctx.beginPath();
+      ctx.moveTo(0, -r); // nose tip
+      ctx.lineTo(0.1 * r, -0.58 * r); // nose shoulder
+      ctx.lineTo(0.15 * r, -0.08 * r); // fuselage at wing root (front)
+      ctx.lineTo(0.82 * r, 0.1 * r); // right wingtip — the widest point
+      ctx.lineTo(0.2 * r, 0.22 * r); // wing root (rear)
+      ctx.lineTo(0.15 * r, 0.48 * r); // fuselage aft taper
+      ctx.lineTo(0.3 * r, 0.68 * r); // right tailplane tip — deliberately smaller than the main wing
+      ctx.lineTo(0.13 * r, 0.78 * r); // tailplane root
+      ctx.lineTo(0, 0.92 * r); // tail tip
+      ctx.lineTo(-0.13 * r, 0.78 * r);
+      ctx.lineTo(-0.3 * r, 0.68 * r); // left tailplane tip
+      ctx.lineTo(-0.15 * r, 0.48 * r);
+      ctx.lineTo(-0.2 * r, 0.22 * r);
+      ctx.lineTo(-0.82 * r, 0.1 * r); // left wingtip
+      ctx.lineTo(-0.15 * r, -0.08 * r);
+      ctx.lineTo(-0.1 * r, -0.58 * r);
+      ctx.closePath();
+    }
+
+    function drawAircraftSymbol(r: number) {
+      traceAircraftPath(r);
+      ctx.fill();
+    }
+
     function drawTargets() {
-      const scale = maxRadius / RADAR_RANGE_NM;
+      const scale = maxRadius / radarRangeKm;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       ctx.font = `${Math.max(10, size * 0.026)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
@@ -426,23 +806,44 @@
         // it never renders as a dim, sweep-affected "shadow" underneath.
         if (ac.id === selectedId) continue;
 
-        const baseAlpha = 0.45 + ac.brightness * 0.55;
-        const dotRadius = 2 + ac.brightness * 1.6;
+        // Range is a display filter, not a data filter: aircraft beyond the
+        // current radar range simply aren't drawn or hit-testable — their
+        // snapshot/state is untouched and they reappear the moment the
+        // range slider brings them back inside the circle.
+        if (ac.distance > radarRangeKm) continue;
 
+        // brightness drives the whole silhouette's opacity (and a faint
+        // glow) — there's no separate dot layered on top of it. The
+        // callsign label below reuses this exact same baseAlpha, so the
+        // two can never drift out of sync (same variable, same frame).
+        const baseAlpha = 0.45 + ac.brightness * 0.55;
+        const symbolR = 14 + ac.brightness * 4; // ~28-36 CSS px footprint
+
+        // Kept deliberately faint — the filled silhouette itself is the
+        // target; a strong blur here washes its shape out into a blob.
         if (ac.brightness > 0.05) {
           ctx.shadowColor = PHOSPHOR;
-          ctx.shadowBlur = 4 + ac.brightness * 6;
+          ctx.shadowBlur = 1 + ac.brightness * 2.5;
         }
+        ctx.save();
+        ctx.translate(ac.screenX, ac.screenY);
+        // Real ADS-B data can lack a heading (see AircraftSnapshot.heading);
+        // rendering-only fallback to "pointing north" so the transform is
+        // never NaN — the Info panel still shows "—", it doesn't invent 0°.
+        ctx.rotate(toRad(ac.heading ?? 0));
         ctx.fillStyle = `rgba(57, 255, 138, ${baseAlpha})`;
-        ctx.beginPath();
-        ctx.arc(ac.screenX, ac.screenY, dotRadius, 0, Math.PI * 2);
-        ctx.fill();
+        drawAircraftSymbol(symbolR);
+        ctx.restore();
         ctx.shadowBlur = 0;
 
         // Only label whatever the sweep just lit up — showing every
-        // callsign at once would bury the display in text.
+        // callsign at once would bury the display in text. While shown,
+        // its alpha is baseAlpha (not a fixed value), so it fades in lockstep
+        // with the silhouette right up until it's hidden again. The offset
+        // (symbolR) already scales with the silhouette's own bounding box,
+        // so the label clears it automatically as the symbol grows/shrinks.
         if (ac.brightness > 0.5) {
-          drawTargetLabel(ac.callsign, ac.screenX, ac.screenY, dotRadius, 'rgba(57, 255, 138, 0.85)');
+          drawTargetLabel(ac.callsign, ac.screenX, ac.screenY, symbolR, `rgba(57, 255, 138, ${baseAlpha})`);
         }
       }
     }
@@ -455,21 +856,34 @@
     function drawSelection() {
       const ac = findSelected();
       if (!ac) return;
+      // Selection persists (selectedId is untouched) even when range changes
+      // push the target outside the circle — the radar just stops drawing
+      // it; the Info panel flags it as OUT OF RANGE instead (renderInfoPanel).
+      if (ac.distance > radarRangeKm) return;
 
-      const dotRadius = 3.6;
+      const symbolR = 20; // ~40 CSS px footprint — a clear step up from normal targets
+      // Faint glow only — at full opacity + this size the silhouette is
+      // already unambiguous; a heavy blur (as sweep-lit brightness needs)
+      // would blow the shape out into a blob instead of a clear aircraft.
+      // This whole function is brightness-independent (no ac.brightness
+      // anywhere below) — selected targets never decay, by construction.
       ctx.shadowColor = SELECTION_COLOR;
-      ctx.shadowBlur = 8;
+      ctx.shadowBlur = 3;
+      ctx.save();
+      ctx.translate(ac.screenX, ac.screenY);
+      ctx.rotate(toRad(ac.heading ?? 0)); // see the normal-target draw path for why the fallback
       ctx.fillStyle = SELECTION_COLOR;
-      ctx.beginPath();
-      ctx.arc(ac.screenX, ac.screenY, dotRadius, 0, Math.PI * 2);
-      ctx.fill();
+      drawAircraftSymbol(symbolR);
+      ctx.restore();
       ctx.shadowBlur = 0;
 
+      // Callsign stays upright regardless of heading — only the plane
+      // symbol above (drawn inside the save/rotate/restore block) rotates.
       ctx.textBaseline = 'middle';
       ctx.font = `${Math.max(10, size * 0.026)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
-      drawTargetLabel(ac.callsign, ac.screenX, ac.screenY, dotRadius, SELECTION_COLOR);
+      drawTargetLabel(ac.callsign, ac.screenX, ac.screenY, symbolR, SELECTION_COLOR);
 
-      const half = 9;
+      const half = symbolR + 3; // scales with the silhouette's own footprint
       const arm = 4;
       const x0 = ac.screenX - half;
       const y0 = ac.screenY - half;
@@ -502,12 +916,13 @@
       const dt = Math.min(100, time - lastTime); // clamp to avoid jumps after a tab was backgrounded
       lastTime = time;
 
-      // Dead-reckon positions smoothly every frame (render clock); the
-      // "reported" telemetry fields shown in the info panel only change on
-      // the data clock below. Re-project against the observer to get this
-      // frame's distance/bearing/x/y, then re-attach persisted brightness.
-      provider.tick(dt);
-      fleet = projectFleet(observer, provider.getSnapshot()).map((target) => ({
+      // Real aircraft only move between fetches (the data clock below, every
+      // DATA_REFRESH_MS) — there's no per-frame motion model to advance here
+      // (no provider.tick() equivalent). Every render frame still
+      // re-projects the latest snapshot against the *current* observer, so
+      // moving the observer between fetches re-centers the display
+      // immediately rather than waiting for the next fetch.
+      fleet = projectFleet(observer, latestSnapshot).map((target) => ({
         ...target,
         screenX: 0,
         screenY: 0,
@@ -527,7 +942,14 @@
       updateSweepIllumination();
 
       for (const ac of fleet) {
-        if (ac.brightness > 0) ac.brightness = Math.max(0, ac.brightness - dt * 0.0015);
+        // Linear fade from 1 to 0 over TARGET_FADE_MS — expressed directly
+        // as a duration rather than an opaque per-ms decay-rate constant.
+        // Sweep period/wedge/hit-detection above are untouched — only how
+        // fast an already-lit target dims. Callsign labels use this same
+        // ac.brightness-derived alpha (see drawTargets), so they fade in
+        // lockstep automatically — no separate timer to keep in sync.
+        // Still clamped to 0 so brightness never goes negative.
+        if (ac.brightness > 0) ac.brightness = Math.max(0, ac.brightness - dt / TARGET_FADE_MS);
         brightnessById.set(ac.id, ac.brightness);
       }
       drawTargets();
@@ -559,6 +981,8 @@
       let hit: RenderAircraft | null = null;
       let bestDist = hitRadius;
       for (const ac of fleet) {
+        // Not drawn beyond the current radar range, so not hittable either.
+        if (ac.distance > radarRangeKm) continue;
         const d = Math.hypot(px - ac.screenX, py - ac.screenY);
         if (d <= bestDist) {
           bestDist = d;
@@ -573,12 +997,11 @@
     canvas.addEventListener('pointerdown', onPointerDown);
 
     // --- Data clock (independent of rendering) ----------------------------------
+    // Not inside requestAnimationFrame — this is its own DATA_REFRESH_MS
+    // (15s) cadence, wholly separate from the render clock (rAF, every
+    // frame) and the sweep clock (SWEEP_PERIOD_MS, 5s/revolution).
     dataIntervalId = window.setInterval(() => {
-      // refresh() may be async for a future network-backed provider; wrapping
-      // in Promise.resolve() handles both sync (today) and async without
-      // an unhandled rejection either way.
-      Promise.resolve(provider.refresh(Date.now())).catch(() => {});
-      if (selectedId) renderInfoPanel();
+      void fetchAircraftData();
     }, DATA_REFRESH_MS);
 
     // --- Startup ------------------------------------------------------------------
@@ -587,6 +1010,7 @@
     ctx.fillStyle = '#030805';
     ctx.fillRect(0, 0, size, size);
     rafId = requestAnimationFrame(frame);
+    void fetchAircraftData(); // fetch immediately on start, then every DATA_REFRESH_MS above
 
     const resizeObserver = new ResizeObserver(() => resize());
     resizeObserver.observe(canvas);
@@ -600,6 +1024,7 @@
       canvas.removeEventListener('pointerdown', onPointerDown);
       latInput?.removeEventListener('change', applyObserverInputs);
       lonInput?.removeEventListener('change', applyObserverInputs);
+      rangeSlider.removeEventListener('input', applyRangeInput);
     }
 
     // Full page navigations (this site has no client router) still benefit
@@ -611,5 +1036,9 @@
 
   const canvas = document.querySelector<HTMLCanvasElement>('[data-radar-canvas]');
   const infoPanel = document.querySelector<HTMLElement>('[data-radar-info]');
-  if (canvas && infoPanel) initRadar(canvas, infoPanel);
+  const rangeSliderEl = document.querySelector<HTMLInputElement>('[data-range-slider]');
+  const rangeValueEl = document.querySelector<HTMLElement>('[data-range-value]');
+  if (canvas && infoPanel && rangeSliderEl && rangeValueEl) {
+    initRadar(canvas, infoPanel, rangeSliderEl, rangeValueEl);
+  }
 </script>

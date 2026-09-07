@@ -7,10 +7,18 @@
  *       -> RadarTarget[]                         ("Radar State", ready to render)
  *       -> Renderer (RadarSimulation.astro)
  *
- * SimulationAircraftProvider is the only provider wired up today. A future
- * RealAdsbProvider only has to implement AircraftDataProvider — nothing else
- * in this pipeline, or the UI, needs to change. There is intentionally no
- * data-source selector anywhere: the active provider is a fixed code-level
+ * SimulationAircraftProvider is the only AircraftDataProvider wired up today.
+ * RadarSimulation.astro currently gets its live data a different way — it
+ * fetches /api/aircraft (a same-origin Cloudflare Pages Function proxying
+ * opendata.adsb.fi, see functions/api/aircraft.ts) directly on its own data
+ * clock and calls normalizeAdsbAircraft/normalizeAircraftResponse below to
+ * turn the response into AircraftSnapshot[] — there is no RealAdsbProvider
+ * class; this is deliberately just a fetch + a plain mapping function, not a
+ * second AircraftDataProvider implementation. A future RealAdsbProvider
+ * could still wrap the same normalization functions and implement
+ * AircraftDataProvider if that abstraction is ever needed here — nothing
+ * below is structured in a way that would block it. There is intentionally
+ * no data-source selector anywhere: the active source is a fixed code-level
  * choice, not a user-facing option.
  */
 
@@ -28,7 +36,14 @@ export interface ObserverState {
 /** Default demo location (Taipei). Purely a starting point — the user can edit it. */
 export const DEFAULT_OBSERVER: ObserverState = { latitude: 25.033, longitude: 121.5654 };
 
-/** Full-scale radar range mapped to the outer ring. */
+/**
+ * Default wander radius (nautical miles) for SimulationAircraftProvider's own
+ * internal fleet — how far the simulated aircraft roam from their origin.
+ * This is a simulator seeding detail, not the radar display's range: the
+ * user-facing "how far out does the screen show" control is separate,
+ * runtime UI state owned by the renderer, purely a display/projection
+ * concern layered on top of this data.
+ */
 export const DEFAULT_RANGE_NM = 40;
 
 export function clampObserver(observer: ObserverState): ObserverState {
@@ -47,22 +62,128 @@ export function clampObserver(observer: ObserverState): ObserverState {
 export interface AircraftSnapshot {
   id: string;
   callsign: string;
-  registration: string;
-  airline: string;
+  /** undefined when the source doesn't have it — never fabricated; render "—" */
+  registration?: string;
+  /** undefined when the source doesn't have it — never fabricated; render "—" */
+  airline?: string;
   /** degrees */
   latitude: number;
   /** degrees */
   longitude: number;
-  /** feet */
-  altitude: number;
-  /** knots */
-  groundSpeed: number;
-  /** compass degrees, 0-359 */
-  heading: number;
-  /** feet per minute, positive = climbing */
-  verticalRate: number;
+  /** feet; undefined if the source didn't report it */
+  altitude?: number;
+  /** knots; undefined if the source didn't report it */
+  groundSpeed?: number;
+  /** compass degrees, 0-359; undefined if the source didn't report it */
+  heading?: number;
+  /** feet per minute, positive = climbing; undefined if the source didn't report it */
+  verticalRate?: number;
   /** epoch ms of the last telemetry report */
   lastUpdated: number;
+}
+
+// ---------------------------------------------------------------------------
+// ADS-B normalization — turns one raw adsb.fi ("readsb"-schema) aircraft
+// object, or a whole /api/aircraft response, into AircraftSnapshot(s). Just
+// plain functions, not a provider/class: RadarSimulation.astro owns the
+// fetch and its own refresh timing; this only knows the upstream field
+// mapping, so there's exactly one place that mapping lives.
+// ---------------------------------------------------------------------------
+
+/** Raw shape of one entry in adsb.fi's "aircraft" array — only the fields we read. */
+export interface RawAdsbAircraft {
+  hex?: string;
+  flight?: string;
+  r?: string;
+  lat?: number;
+  lon?: number;
+  alt_baro?: number | string;
+  alt_geom?: number;
+  gs?: number;
+  track?: number;
+  baro_rate?: number;
+  geom_rate?: number;
+  seen_pos?: number;
+  seen?: number;
+}
+
+/** Reject a position report older than this — matches the verified M5Dial threshold. */
+const POSITION_MAX_AGE_SEC = 60;
+
+/**
+ * Normalizes one raw adsb.fi aircraft object into an AircraftSnapshot, or
+ * null if it's missing a required field (icao24 hex, lat/lon) or its
+ * position report is too stale to trust (> POSITION_MAX_AGE_SEC). Never
+ * guesses: a field the upstream didn't send (airline always, registration
+ * sometimes, occasionally altitude/speed/heading/vertical rate) comes back
+ * `undefined`, not 0/NaN/a fabricated value — callers render that as "—".
+ */
+export function normalizeAdsbAircraft(raw: RawAdsbAircraft, now: number): AircraftSnapshot | null {
+  if (typeof raw.hex !== 'string' || raw.hex.length === 0) return null;
+  if (typeof raw.lat !== 'number' || typeof raw.lon !== 'number') return null;
+  if (!Number.isFinite(raw.lat) || !Number.isFinite(raw.lon)) return null;
+
+  // seen_pos (age of the position report itself) is preferred; seen (age of
+  // any message) is the fallback — same priority M5Dial uses.
+  const positionAgeSec = typeof raw.seen_pos === 'number' ? raw.seen_pos
+    : typeof raw.seen === 'number' ? raw.seen
+    : null;
+  if (positionAgeSec === null || positionAgeSec < 0 || positionAgeSec > POSITION_MAX_AGE_SEC) {
+    return null;
+  }
+
+  const rawCallsign = typeof raw.flight === 'string' ? raw.flight.trim() : '';
+  const callsign = rawCallsign.length > 0 ? rawCallsign : raw.hex;
+
+  const registration = typeof raw.r === 'string' && raw.r.trim().length > 0 ? raw.r.trim() : undefined;
+
+  // alt_baro can also legitimately be the string "ground" (on the ramp) —
+  // typeof-number-guarded here so that falls through to alt_geom / undefined
+  // rather than being coerced into a bogus number.
+  const altitude = typeof raw.alt_baro === 'number' ? raw.alt_baro
+    : typeof raw.alt_geom === 'number' ? raw.alt_geom
+    : undefined;
+
+  const verticalRate = typeof raw.baro_rate === 'number' ? raw.baro_rate
+    : typeof raw.geom_rate === 'number' ? raw.geom_rate
+    : undefined;
+
+  return {
+    id: raw.hex,
+    callsign,
+    registration,
+    airline: undefined, // no reliable upstream field for this — never guessed
+    latitude: raw.lat,
+    longitude: raw.lon,
+    altitude,
+    groundSpeed: typeof raw.gs === 'number' ? raw.gs : undefined,
+    heading: typeof raw.track === 'number' ? raw.track : undefined,
+    verticalRate,
+    lastUpdated: now - positionAgeSec * 1000,
+  };
+}
+
+/**
+ * Normalizes a whole /api/aircraft response body into AircraftSnapshot[].
+ * Accepts either adsb.fi's documented `{"aircraft": [...]}` key or the
+ * older/alternate `{"ac": [...]}` some readsb-based deployments use;
+ * anything else (or a malformed entry) is skipped rather than thrown on —
+ * one bad entry never fails the whole fetch. No observer, no range, no
+ * distance filtering happens here — see RadarSimulation.astro for the
+ * MAX_AIRCRAFT safety cap and the render-time radarRangeKm filtering.
+ */
+export function normalizeAircraftResponse(data: unknown, now: number): AircraftSnapshot[] {
+  const body = data as { aircraft?: unknown; ac?: unknown } | null | undefined;
+  const list = Array.isArray(body?.aircraft) ? body!.aircraft : Array.isArray(body?.ac) ? body!.ac : [];
+
+  const normalized: AircraftSnapshot[] = [];
+  for (const raw of list) {
+    if (raw && typeof raw === 'object') {
+      const entry = normalizeAdsbAircraft(raw as RawAdsbAircraft, now);
+      if (entry) normalized.push(entry);
+    }
+  }
+  return normalized;
 }
 
 // ---------------------------------------------------------------------------
@@ -72,13 +193,13 @@ export interface AircraftSnapshot {
 // ---------------------------------------------------------------------------
 
 export interface RadarTarget extends AircraftSnapshot {
-  /** nautical miles from the observer */
+  /** kilometres from the observer */
   distance: number;
   /** compass degrees from the observer, 0 = north */
   bearing: number;
-  /** nautical miles, +east of the observer */
+  /** kilometres, +east of the observer */
   x: number;
-  /** nautical miles, +north of the observer */
+  /** kilometres, +north of the observer */
   y: number;
 }
 
@@ -125,6 +246,9 @@ export function initialBearing(
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
+/** Nautical miles to kilometres — the one place that unit conversion happens. */
+export const NM_TO_KM = 1.852;
+
 /**
  * Projects a fleet snapshot into observer-relative distance/bearing/x/y.
  * Pure function — returns a fresh, small array every call. The fleet here
@@ -132,10 +256,15 @@ export function initialBearing(
  * objects per frame" case; the render loop is where persistent state
  * (screen position, sweep brightness) actually needs to be reused, and it
  * owns that separately.
+ *
+ * The underlying great-circle math is nautical-mile-based (haversineDistanceNm),
+ * but everything this function outputs — distance, x, y — is kilometres: the
+ * one unit the radar display (range slider, distance rings, Aircraft Info)
+ * uses for position, so there's never a mix of NM/km on screen.
  */
 export function projectFleet(observer: ObserverState, snapshots: AircraftSnapshot[]): RadarTarget[] {
   return snapshots.map((snapshot) => {
-    const distance = haversineDistanceNm(observer, snapshot);
+    const distance = haversineDistanceNm(observer, snapshot) * NM_TO_KM;
     const bearing = initialBearing(observer, snapshot);
     const bearingRad = toRad(bearing);
     return {
@@ -169,6 +298,16 @@ export interface AircraftDataProvider {
 // ---------------------------------------------------------------------------
 
 interface SimulatedAircraft extends AircraftSnapshot {
+  // AircraftSnapshot widened these to optional for real (possibly-partial)
+  // ADS-B data — narrowed back to required here since the simulation always
+  // generates every one of them.
+  registration: string;
+  airline: string;
+  altitude: number;
+  groundSpeed: number;
+  heading: number;
+  verticalRate: number;
+
   /** nm, +east of this provider's internal reference point */
   simX: number;
   /** nm, +north of this provider's internal reference point */
