@@ -1,0 +1,464 @@
+---
+// Pure front-end radar display simulation. No API calls, no external data —
+// canvas-drawn sweep, concentric range rings, and slow-moving simulated
+// targets, plus a click/tap-to-select aircraft info panel.
+---
+
+<div class="flex flex-col gap-6 md:flex-row md:items-start">
+  <div class="order-1 min-w-0 md:order-2 md:flex-1">
+    <div class="radar-panel">
+      <canvas
+        class="radar-canvas"
+        data-radar-canvas
+        role="img"
+        aria-label="Simulated radar display with a rotating sweep and selectable aircraft targets"
+      ></canvas>
+    </div>
+  </div>
+
+  <aside
+    class="order-2 min-w-0 rounded-lg border border-gray-200 p-5 dark:border-gray-800 sm:p-6 md:order-1 md:min-w-[240px] md:flex-none md:basis-[38%]"
+    data-radar-info
+  >
+    <div data-radar-empty>
+      <p class="text-sm font-semibold tracking-wide text-gray-500 dark:text-gray-400">
+        NO AIRCRAFT SELECTED
+      </p>
+      <p class="mt-2 text-sm text-gray-500 dark:text-gray-500">
+        Select a target on the radar to view aircraft information.
+      </p>
+    </div>
+
+    <div data-radar-details class="hidden">
+      <div class="mb-4">
+        <p class="text-2xl font-bold text-gray-900 dark:text-white" data-field="callsign"></p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          <span data-field="airline"></span> &middot; <span data-field="registration"></span>
+        </p>
+      </div>
+
+      <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+        <div>
+          <dt class="text-gray-500 dark:text-gray-400">Altitude</dt>
+          <dd class="font-medium text-gray-900 dark:text-white" data-field="altitude"></dd>
+        </div>
+        <div>
+          <dt class="text-gray-500 dark:text-gray-400">Ground Speed</dt>
+          <dd class="font-medium text-gray-900 dark:text-white" data-field="groundSpeed"></dd>
+        </div>
+        <div>
+          <dt class="text-gray-500 dark:text-gray-400">Heading</dt>
+          <dd class="font-medium text-gray-900 dark:text-white" data-field="heading"></dd>
+        </div>
+        <div>
+          <dt class="text-gray-500 dark:text-gray-400">Vertical Rate</dt>
+          <dd class="font-medium text-gray-900 dark:text-white" data-field="verticalRate"></dd>
+        </div>
+        <div>
+          <dt class="text-gray-500 dark:text-gray-400">Distance</dt>
+          <dd class="font-medium text-gray-900 dark:text-white" data-field="distance"></dd>
+        </div>
+        <div>
+          <dt class="text-gray-500 dark:text-gray-400">Bearing</dt>
+          <dd class="font-medium text-gray-900 dark:text-white" data-field="bearing"></dd>
+        </div>
+      </dl>
+
+      <p class="mt-4 text-xs text-gray-500 dark:text-gray-500" data-field="freshness"></p>
+    </div>
+  </aside>
+</div>
+
+<style>
+  .radar-panel {
+    width: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+    aspect-ratio: 1 / 1;
+    padding: 4%;
+    border-radius: 1rem;
+    background: #050c08;
+    border: 1px solid #1a2b20;
+    box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.6);
+  }
+
+  .radar-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+</style>
+
+<script>
+  import {
+    SimulationAircraftProvider,
+    projectFleet,
+    DEFAULT_OBSERVER,
+    DEFAULT_RANGE_NM,
+    type RadarTarget,
+  } from '../lib/radar';
+
+  // Everything is scoped to this module so re-including the component (or a
+  // future client-side router re-running the script) can't stack up extra
+  // animation loops or timers.
+  function initRadar(canvas: HTMLCanvasElement, infoPanel: HTMLElement) {
+    if (canvas.dataset.radarBound === 'true') return;
+    canvas.dataset.radarBound = 'true';
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const RING_COUNT = 4;
+    const SWEEP_PERIOD_MS = 5000; // sweep clock: one full rotation
+    const SWEEP_WIDTH_RAD = (7 * Math.PI) / 180;
+    const AIRCRAFT_COUNT = 10;
+    const RADAR_RANGE_NM = DEFAULT_RANGE_NM; // full-scale range mapped to the outer ring
+    const DATA_REFRESH_MS = 5000; // data clock: simulated telemetry cadence
+    const HIT_RADIUS_PX = 16; // generous invisible hit area for click/touch
+    const PHOSPHOR = '#39ff8a';
+    const SELECTION_COLOR = '#eafff0';
+
+    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let size = 0; // CSS pixel size of the (square) canvas
+    let center = 0;
+    let maxRadius = 0;
+    let sweepAngle = 0; // 0 = north/up, increases clockwise
+    let lastTime = 0;
+    let rafId = 0;
+    let dataIntervalId = 0;
+    let ageIntervalId = 0;
+    let destroyed = false;
+    let selectedId: string | null = null;
+
+    // The shared RadarTarget model stays exactly what the projection pipeline
+    // produces. Render-only bookkeeping (screen position, sweep brightness)
+    // is view state and lives alongside it here, not in the data model.
+    type RenderAircraft = RadarTarget & { screenX: number; screenY: number; brightness: number };
+
+    const observer = DEFAULT_OBSERVER;
+    const provider = new SimulationAircraftProvider(AIRCRAFT_COUNT, observer, RADAR_RANGE_NM);
+    // projectFleet returns a fresh array every call, so brightness (which
+    // must persist and decay across frames) is tracked separately here and
+    // re-attached to each frame's freshly projected targets.
+    const brightnessById = new Map<string, number>();
+    let fleet: RenderAircraft[] = [];
+
+    // --- Info panel DOM refs -------------------------------------------------
+    const emptyEl = infoPanel.querySelector<HTMLElement>('[data-radar-empty]');
+    const detailsEl = infoPanel.querySelector<HTMLElement>('[data-radar-details]');
+    const fieldEls: Record<string, HTMLElement | null> = {};
+    for (const el of infoPanel.querySelectorAll<HTMLElement>('[data-field]')) {
+      const key = el.dataset.field;
+      if (key) fieldEls[key] = el;
+    }
+
+    function findSelected(): RenderAircraft | undefined {
+      return selectedId ? fleet.find((ac) => ac.id === selectedId) : undefined;
+    }
+
+    function formatFreshness(ac: RadarTarget): string {
+      const ageS = Math.max(0, Math.round((Date.now() - ac.lastUpdated) / 1000));
+      const stale = Date.now() - ac.lastUpdated > DATA_REFRESH_MS * 1.8;
+      return `Updated ${ageS}s ago${stale ? ' · stale' : ''}`;
+    }
+
+    function renderInfoPanel() {
+      const ac = findSelected();
+      emptyEl?.classList.toggle('hidden', !!ac);
+      detailsEl?.classList.toggle('hidden', !ac);
+      stopAgeTicker();
+      if (!ac) return;
+
+      if (fieldEls.callsign) fieldEls.callsign.textContent = ac.callsign;
+      if (fieldEls.airline) fieldEls.airline.textContent = ac.airline;
+      if (fieldEls.registration) fieldEls.registration.textContent = ac.registration;
+      if (fieldEls.altitude) fieldEls.altitude.textContent = `${ac.altitude.toLocaleString()} ft`;
+      if (fieldEls.groundSpeed) fieldEls.groundSpeed.textContent = `${Math.round(ac.groundSpeed)} kt`;
+      if (fieldEls.heading) fieldEls.heading.textContent = `${Math.round(ac.heading)}°`;
+      if (fieldEls.verticalRate) {
+        const vr = Math.round(ac.verticalRate);
+        fieldEls.verticalRate.textContent = `${vr > 0 ? '+' : ''}${vr} fpm`;
+      }
+      if (fieldEls.distance) fieldEls.distance.textContent = `${ac.distance.toFixed(1)} nm`;
+      if (fieldEls.bearing) fieldEls.bearing.textContent = `${Math.round(ac.bearing)}°`;
+      if (fieldEls.freshness) fieldEls.freshness.textContent = formatFreshness(ac);
+
+      startAgeTicker();
+    }
+
+    function startAgeTicker() {
+      stopAgeTicker();
+      // A small UI-only ticker so "Updated Xs ago" counts up smoothly. This
+      // is a display concern, separate from the data clock that actually
+      // refreshes the telemetry values.
+      ageIntervalId = window.setInterval(() => {
+        const ac = findSelected();
+        if (ac && fieldEls.freshness) fieldEls.freshness.textContent = formatFreshness(ac);
+      }, 1000);
+    }
+
+    function stopAgeTicker() {
+      if (ageIntervalId) {
+        clearInterval(ageIntervalId);
+        ageIntervalId = 0;
+      }
+    }
+
+    function selectAircraft(id: string | null) {
+      selectedId = id;
+      renderInfoPanel();
+    }
+
+    // --- Canvas drawing -------------------------------------------------------
+    function polarToXY(compassAngle: number, radius: number) {
+      return {
+        x: center + radius * Math.sin(compassAngle),
+        y: center - radius * Math.cos(compassAngle),
+      };
+    }
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      size = Math.max(1, Math.round(rect.width));
+      canvas.width = size * dpr;
+      canvas.height = size * dpr;
+      if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      center = size / 2;
+      maxRadius = size * 0.42;
+    }
+
+    function drawGrid() {
+      ctx.strokeStyle = 'rgba(57, 255, 138, 0.35)';
+      ctx.lineWidth = 1;
+
+      // Concentric range rings.
+      for (let i = 1; i <= RING_COUNT; i++) {
+        const r = (maxRadius * i) / RING_COUNT;
+        ctx.beginPath();
+        ctx.arc(center, center, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // Outer boundary, drawn a touch brighter.
+      ctx.strokeStyle = 'rgba(57, 255, 138, 0.55)';
+      ctx.beginPath();
+      ctx.arc(center, center, maxRadius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Horizontal / vertical bearing lines.
+      ctx.strokeStyle = 'rgba(57, 255, 138, 0.25)';
+      ctx.beginPath();
+      ctx.moveTo(center - maxRadius, center);
+      ctx.lineTo(center + maxRadius, center);
+      ctx.moveTo(center, center - maxRadius);
+      ctx.lineTo(center, center + maxRadius);
+      ctx.stroke();
+
+      // Bearing labels.
+      ctx.font = `${Math.max(10, size * 0.032)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+      ctx.fillStyle = 'rgba(57, 255, 138, 0.6)';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const labelR = maxRadius + size * 0.06;
+      ctx.fillText('0°', center, center - labelR + size * 0.03);
+      ctx.fillText('90°', center + labelR, center);
+      ctx.fillText('180°', center, center + labelR - size * 0.03);
+      ctx.fillText('270°', center - labelR, center);
+    }
+
+    function drawSweep() {
+      const tip = polarToXY(sweepAngle, maxRadius);
+
+      // Faint wedge behind the leading edge. Because we never fully clear
+      // the canvas, this wedge — and everything it overlaps — bleeds into
+      // a fading trail on subsequent frames (the phosphor/persistence look).
+      const gradient = ctx.createRadialGradient(center, center, 0, center, center, maxRadius);
+      gradient.addColorStop(0, 'rgba(57, 255, 138, 0.16)');
+      gradient.addColorStop(1, 'rgba(57, 255, 138, 0)');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.moveTo(center, center);
+      ctx.arc(center, center, maxRadius, sweepAngle - SWEEP_WIDTH_RAD - Math.PI / 2, sweepAngle - Math.PI / 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Bright leading line.
+      ctx.strokeStyle = PHOSPHOR;
+      ctx.lineWidth = 1.5;
+      ctx.shadowColor = PHOSPHOR;
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.moveTo(center, center);
+      ctx.lineTo(tip.x, tip.y);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    function drawTargets() {
+      const scale = maxRadius / RADAR_RANGE_NM;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.font = `${Math.max(10, size * 0.026)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+
+      for (const ac of fleet) {
+        ac.screenX = center + ac.x * scale;
+        ac.screenY = center - ac.y * scale;
+
+        const isSelected = ac.id === selectedId;
+        const baseAlpha = 0.45 + ac.brightness * 0.55;
+        const dotRadius = 2 + ac.brightness * 1.6;
+
+        if (ac.brightness > 0.05 || isSelected) {
+          ctx.shadowColor = PHOSPHOR;
+          ctx.shadowBlur = 4 + ac.brightness * 6;
+        }
+        ctx.fillStyle = `rgba(57, 255, 138, ${baseAlpha})`;
+        ctx.beginPath();
+        ctx.arc(ac.screenX, ac.screenY, dotRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Only label the selected target and whatever the sweep just lit up —
+        // showing every callsign at once would bury the display in text.
+        if (isSelected || ac.brightness > 0.5) {
+          ctx.fillStyle = isSelected ? SELECTION_COLOR : 'rgba(57, 255, 138, 0.85)';
+          ctx.fillText(ac.callsign, ac.screenX + dotRadius + 4, ac.screenY);
+        }
+      }
+    }
+
+    // Selection marker: an explicit corner-bracket box, drawn fresh every
+    // frame at full strength. It is intentionally independent of `brightness`
+    // (sweep illumination) so it stays visible long after the sweep moves on.
+    function drawSelection() {
+      const ac = findSelected();
+      if (!ac) return;
+
+      const half = 9;
+      const arm = 4;
+      const x0 = ac.screenX - half;
+      const y0 = ac.screenY - half;
+      const x1 = ac.screenX + half;
+      const y1 = ac.screenY + half;
+
+      ctx.strokeStyle = SELECTION_COLOR;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x0, y0 + arm); ctx.lineTo(x0, y0); ctx.lineTo(x0 + arm, y0);
+      ctx.moveTo(x1 - arm, y0); ctx.lineTo(x1, y0); ctx.lineTo(x1, y0 + arm);
+      ctx.moveTo(x1, y1 - arm); ctx.lineTo(x1, y1); ctx.lineTo(x1 - arm, y1);
+      ctx.moveTo(x0 + arm, y1); ctx.lineTo(x0, y1); ctx.lineTo(x0, y1 - arm);
+      ctx.stroke();
+    }
+
+    function updateSweepIllumination() {
+      for (const ac of fleet) {
+        const angleRad = Math.atan2(ac.x, ac.y);
+        let diff = (sweepAngle - angleRad) % (Math.PI * 2);
+        if (diff < 0) diff += Math.PI * 2;
+        ac.brightness = diff < SWEEP_WIDTH_RAD ? 1 : ac.brightness;
+      }
+    }
+
+    // --- Rendering clock (requestAnimationFrame) -------------------------------
+    function frame(time: number) {
+      if (destroyed || !ctx) return;
+      if (!lastTime) lastTime = time;
+      const dt = Math.min(100, time - lastTime); // clamp to avoid jumps after a tab was backgrounded
+      lastTime = time;
+
+      // Dead-reckon positions smoothly every frame (render clock); the
+      // "reported" telemetry fields shown in the info panel only change on
+      // the data clock below. Re-project against the observer to get this
+      // frame's distance/bearing/x/y, then re-attach persisted brightness.
+      provider.tick(dt);
+      fleet = projectFleet(observer, provider.getSnapshot()).map((target) => ({
+        ...target,
+        screenX: 0,
+        screenY: 0,
+        brightness: brightnessById.get(target.id) ?? 0,
+      }));
+
+      // Never a hard clear — a translucent overlay lets old strokes decay
+      // gradually, which is what produces the phosphor persistence trail.
+      ctx.fillStyle = 'rgba(3, 8, 5, 0.2)';
+      ctx.fillRect(0, 0, size, size);
+
+      drawGrid();
+
+      sweepAngle += ((Math.PI * 2) / SWEEP_PERIOD_MS) * dt; // sweep clock, own period constant
+      if (sweepAngle > Math.PI * 2) sweepAngle -= Math.PI * 2;
+      updateSweepIllumination();
+
+      for (const ac of fleet) {
+        if (ac.brightness > 0) ac.brightness = Math.max(0, ac.brightness - dt * 0.0015);
+        brightnessById.set(ac.id, ac.brightness);
+      }
+      drawTargets();
+      drawSweep();
+      drawSelection();
+
+      rafId = requestAnimationFrame(frame);
+    }
+
+    // --- Pointer selection ------------------------------------------------------
+    function onPointerDown(event: PointerEvent) {
+      const rect = canvas.getBoundingClientRect();
+      const px = event.clientX - rect.left;
+      const py = event.clientY - rect.top;
+
+      let hit: RenderAircraft | null = null;
+      let bestDist = HIT_RADIUS_PX;
+      for (const ac of fleet) {
+        const d = Math.hypot(px - ac.screenX, py - ac.screenY);
+        if (d <= bestDist) {
+          bestDist = d;
+          hit = ac;
+        }
+      }
+      // Clicking empty radar space (no target within the hit radius) clears
+      // the current selection.
+      selectAircraft(hit ? hit.id : null);
+    }
+
+    canvas.addEventListener('pointerdown', onPointerDown);
+
+    // --- Data clock (independent of rendering) ----------------------------------
+    dataIntervalId = window.setInterval(() => {
+      provider.refresh(Date.now());
+      if (selectedId) renderInfoPanel();
+    }, DATA_REFRESH_MS);
+
+    // --- Startup ------------------------------------------------------------------
+    resize();
+    // Paint an initial opaque background so the first frame doesn't start transparent.
+    ctx.fillStyle = '#030805';
+    ctx.fillRect(0, 0, size, size);
+    rafId = requestAnimationFrame(frame);
+
+    const resizeObserver = new ResizeObserver(() => resize());
+    resizeObserver.observe(canvas);
+
+    function cleanup() {
+      destroyed = true;
+      cancelAnimationFrame(rafId);
+      resizeObserver.disconnect();
+      clearInterval(dataIntervalId);
+      stopAgeTicker();
+      canvas.removeEventListener('pointerdown', onPointerDown);
+    }
+
+    // Full page navigations (this site has no client router) still benefit
+    // from stopping the loop/timers as soon as the page is torn down; this
+    // also makes the component safe if a client router is ever added later.
+    window.addEventListener('pagehide', cleanup, { once: true });
+    document.addEventListener('astro:before-swap', cleanup, { once: true });
+  }
+
+  const canvas = document.querySelector<HTMLCanvasElement>('[data-radar-canvas]');
+  const infoPanel = document.querySelector<HTMLElement>('[data-radar-info]');
+  if (canvas && infoPanel) initRadar(canvas, infoPanel);
+</script>
