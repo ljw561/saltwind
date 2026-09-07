@@ -383,6 +383,10 @@
     const MIN_RANGE_KM = 5;
     const MAX_RANGE_KM = 100;
     const DEFAULT_RANGE_KM = 40;
+    // localStorage key for the user-edited Observer Location, so it survives
+    // a reload. Browser-only state — never touched at Astro build/SSR time,
+    // only from here (this whole <script> only ever runs client-side).
+    const OBSERVER_STORAGE_KEY = 'saltwind.radar.observer';
 
     let dpr = Math.min(window.devicePixelRatio || 1, 2);
     let size = 0; // CSS pixel size of the (square) canvas
@@ -406,11 +410,46 @@
     // is view state and lives alongside it here, not in the data model.
     type RenderAircraft = RadarTarget & { screenX: number; screenY: number; brightness: number };
 
+    // Reads a previously-saved Observer Location back out of localStorage.
+    // Returns null (never throws) for anything that isn't a clean, in-range
+    // {latitude, longitude} — missing key, broken JSON, non-number fields,
+    // or out-of-range values all just fall back to DEFAULT_OBSERVER at the
+    // call site below, same as if nothing had ever been saved.
+    function loadStoredObserver(): ObserverState | null {
+      try {
+        const raw = localStorage.getItem(OBSERVER_STORAGE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        const lat = parsed?.latitude;
+        const lon = parsed?.longitude;
+        if (typeof lat !== 'number' || typeof lon !== 'number') return null;
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+        if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+        return { latitude: lat, longitude: lon };
+      } catch {
+        // Privacy mode / storage disabled / corrupt entry — never let a
+        // storage problem affect the radar itself.
+        return null;
+      }
+    }
+
+    function saveObserver(value: ObserverState) {
+      try {
+        localStorage.setItem(OBSERVER_STORAGE_KEY, JSON.stringify(value));
+      } catch {
+        // Same as above: a failed write is silently ignored, not surfaced.
+      }
+    }
+
     // Observer location is user-editable UI state — moving it re-centers the
     // radar's distance/bearing/x-y math; it does not move any aircraft (see
     // fetchAircraftData below, which re-queries /api/aircraft around
-    // whatever observer is current at fetch time).
-    let observer: ObserverState = { ...DEFAULT_OBSERVER };
+    // whatever observer is current at fetch time). Restored from
+    // localStorage up front (before reflectObserverInputs()/the first
+    // fetchAircraftData() call below ever run), so a saved location is what
+    // the input fields show AND what the very first fetch uses — never a
+    // flash of DEFAULT_OBSERVER that then gets replaced.
+    let observer: ObserverState = loadStoredObserver() ?? { ...DEFAULT_OBSERVER };
     // The latest successfully-fetched real snapshot. Deliberately never
     // reset to [] on a failed fetch — see fetchAircraftData: a bad/failed
     // refresh just leaves this (and everything drawn from it) exactly as it
@@ -454,6 +493,10 @@
       // Reflect back so a clamped or invalid value never leaves the field
       // silently disagreeing with what is actually being used.
       reflectObserverInputs();
+      // Persist the actual (clamped) value that's now in effect — never the
+      // raw, possibly-invalid input — so it survives a reload. Only happens
+      // here, i.e. only on 'change' (blur/Enter), same as the fetch below.
+      saveObserver(observer);
       // This only fires on 'change' (blur/Enter), not per keystroke, so it's
       // already naturally debounced to at most one extra fetch per edit —
       // no separate setTimeout debounce needed. Fire-and-forget: errors are
