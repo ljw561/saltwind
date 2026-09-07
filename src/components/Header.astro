@@ -13,9 +13,14 @@ const navItems = isEnglish
       { href: '/', label: 'Home' },
       { href: '/blog', label: 'Blog' },
       { href: '/tags', label: 'Tags' },
-      { href: '/radar', label: 'Radar' },
       { href: '/about', label: 'About' },
     ];
+  // Radar temporarily hidden from navigation — the live ADS-B data pipeline
+  // (Cloudflare Pages Function -> opendata.adsb.fi) is currently broken in
+  // production (502s). The /radar route itself now shows a short
+  // "temporarily unavailable" placeholder instead of the broken feature —
+  // see src/pages/radar.astro. Re-add `{ href: '/radar', label: 'Radar' }`
+  // to the list above once the underlying issue is fixed.
 
 const homeUrl = isEnglish ? '/en/' : '/';
 

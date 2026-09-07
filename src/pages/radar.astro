@@ -1,22 +1,25 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import RadarSimulation from '../components/RadarSimulation.astro';
+// RadarSimulation is temporarily NOT rendered here — the live ADS-B data
+// pipeline (Cloudflare Pages Function /api/aircraft -> opendata.adsb.fi) is
+// currently broken in production (502s from the saltwind.co edge specifically;
+// root-caused but not yet fixed). The nav link to this page has also been
+// removed (see Header.astro) so it's not discoverable, but the route itself
+// stays up and shows this short placeholder rather than 404ing or showing
+// the broken feature. Restore the `<RadarSimulation />` import/usage below
+// once the underlying issue is fixed.
 ---
 
 <BaseLayout
   title="Radar Simulation - Saltwind"
   description="Browser-based radar display simulation."
 >
-  <div class="max-w-6xl mx-auto px-4 py-12">
-    <header class="mb-8 text-center">
-      <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2">
-        Radar Simulation
-      </h1>
-      <p class="text-gray-600 dark:text-gray-400">
-        Browser-based radar display simulation.
-      </p>
-    </header>
-
-    <RadarSimulation />
+  <div class="max-w-2xl mx-auto px-4 py-24 text-center">
+    <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-3">
+      Radar Simulation
+    </h1>
+    <p class="text-gray-600 dark:text-gray-400">
+      This page is temporarily unavailable while a data issue is being fixed. Please check back later.
+    </p>
   </div>
 </BaseLayout>
